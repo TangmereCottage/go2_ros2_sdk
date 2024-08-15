@@ -98,6 +98,12 @@ def generate_launch_description():
         'nav2_params.yaml'
     )
 
+    collision_config = os.path.join(
+        get_package_share_directory('go2_robot_sdk'),
+        'config',
+        'collision_monitor_params.yaml'
+    )
+
     if conn_mode == 'single':
 
         urdf_file_name = 'go2.urdf'
@@ -248,6 +254,17 @@ def generate_launch_description():
             ]),
             launch_arguments={
                 'params_file': nav2_config,
+                'use_sim_time': use_sim_time,
+            }.items(),
+        ),
+
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource([
+                os.path.join(get_package_share_directory(
+                    'nav2_collision_monitor'), 'launch', 'collision_monitor_node.launch.py')
+            ]),
+            launch_arguments={
+                'params_file': collision_config,
                 'use_sim_time': use_sim_time,
             }.items(),
         ),

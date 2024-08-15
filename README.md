@@ -310,3 +310,8 @@ Special thanks to @tfoldi, @legion1581, @budavariam, @alex.lin and TheRoboVerse 
 ## License
 
 This project is licensed under the BSD 2-clause License - see the [LICENSE](https://github.com/abizovnuralem/go2_ros2_sdk/blob/master/LICENSE) file for details.
+
+
+
+ros2 launch nav2_collision_monitor collision_monitor_node.launch.py
+
