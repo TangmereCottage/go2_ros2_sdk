@@ -21,7 +21,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 import json
 import logging
 import os
@@ -47,37 +46,28 @@ from sensor_msgs_py import point_cloud2
 from std_msgs.msg import Header
 from nav_msgs.msg import Odometry
 
-
 logging.basicConfig(level=logging.WARN)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-
 class RobotBaseNode(Node):
 
     def __init__(self):
+        
         super().__init__('go2_driver_node')
 
-        self.declare_parameter('robot_ip', os.getenv(
-            'ROBOT_IP', os.getenv('GO2_IP')))
-        self.declare_parameter('token', os.getenv(
-            'ROBOT_TOKEN', os.getenv('GO2_TOKEN', '')))
-        self.declare_parameter('conn_type', os.getenv(
-            'CONN_TYPE', os.getenv('CONN_TYPE', '')))
+        self.declare_parameter('robot_ip',  os.getenv('ROBOT_IP',    os.getenv('GO2_IP')))
+        self.declare_parameter('token',     os.getenv('ROBOT_TOKEN', os.getenv('GO2_TOKEN', '')))
+        self.declare_parameter('conn_type', os.getenv('CONN_TYPE',   os.getenv('CONN_TYPE', '')))
 
-        self.robot_ip = self.get_parameter(
-            'robot_ip').get_parameter_value().string_value
-        self.token = self.get_parameter(
-            'token').get_parameter_value().string_value
+        self.robot_ip = self.get_parameter('robot_ip').get_parameter_value().string_value
+        self.token = self.get_parameter('token').get_parameter_value().string_value
         self.robot_ip_lst = self.robot_ip.replace(" ", "").split(",")
-        self.conn_type = self.get_parameter(
-            'conn_type').get_parameter_value().string_value
+        self.conn_type = self.get_parameter('conn_type').get_parameter_value().string_value
+        self.conn_mode = "single"
 
-        self.conn_mode = "single" if len(self.robot_ip_lst) == 1 else "multi"
-
-        self.get_logger().info(f"Received ip list: {self.robot_ip_lst}")
+        self.get_logger().info(f"Received ip: {self.robot_ip}")
         self.get_logger().info(f"Connection type is {self.conn_type}")
-
         self.get_logger().info(f"Connection mode is {self.conn_mode}")
 
         self.conn = {}
@@ -89,30 +79,13 @@ class RobotBaseNode(Node):
         self.go2_odometry_pub = []
         self.imu_pub = []
 
-        if self.conn_mode == 'single':
-            self.joint_pub.append(self.create_publisher(
-                JointState, 'joint_states', qos_profile))
-            self.go2_state_pub.append(self.create_publisher(
-                Go2State, 'go2_states', qos_profile))
-            self.go2_lidar_pub.append(self.create_publisher(
-                PointCloud2, 'point_cloud2', qos_profile))
-            self.go2_odometry_pub.append(
-                self.create_publisher(Odometry, 'odom', qos_profile))
-            self.imu_pub.append(self.create_publisher(IMU, 'imu', qos_profile))
-
-        else:
-            for i in range(len(self.robot_ip_lst)):
-                self.joint_pub.append(self.create_publisher(
-                    JointState, f'robot{i}/joint_states', qos_profile))
-                self.go2_state_pub.append(self.create_publisher(
-                    Go2State, f'robot{i}/go2_states', qos_profile))
-                self.go2_lidar_pub.append(self.create_publisher(
-                    PointCloud2, f'robot{i}/point_cloud2', qos_profile))
-                self.go2_odometry_pub.append(self.create_publisher(
-                    Odometry, f'robot{i}/odom', qos_profile))
-                self.imu_pub.append(self.create_publisher(
-                    IMU, f'robot{i}/imu', qos_profile))
-
+        # the major data products we are publishing 
+        self.joint_pub.append(self.create_publisher(JointState, 'sdk_joint_states', qos_profile))
+        self.go2_state_pub.append(self.create_publisher(Go2State, 'sdk_go2_states', qos_profile))
+        self.go2_lidar_pub.append(self.create_publisher(PointCloud2, 'sdk_point_cloud2', qos_profile))
+        self.go2_odometry_pub.append(self.create_publisher(Odometry, 'sdk_odom', qos_profile))
+        self.imu_pub.append(self.create_publisher(IMU, 'sdk_imu', qos_profile))
+       
         self.broadcaster = TransformBroadcaster(self, qos=qos_profile)
 
         self.robot_cmd_vel = {}
@@ -123,19 +96,11 @@ class RobotBaseNode(Node):
 
         self.joy_state = Joy()
 
-        if self.conn_mode == 'single':
-            self.create_subscription(
-                Twist,
-                'cmd_vel_out',
-                lambda msg: self.cmd_vel_cb(msg, "0"),
-                qos_profile)
-        else:
-            for i in range(len(self.robot_ip_lst)):
-                self.create_subscription(
-                    Twist,
-                    f'robot{str(i)}/cmd_vel_out',
-                    lambda msg: self.cmd_vel_cb(msg, str(i)),
-                    qos_profile)
+        self.create_subscription(
+            Twist,
+            'cmd_vel_out',
+            lambda msg: self.cmd_vel_cb(msg, "0"),
+            qos_profile)
 
         self.create_subscription(
             Joy,
@@ -274,11 +239,7 @@ class RobotBaseNode(Node):
                 odom_trans = TransformStamped()
                 odom_trans.header.stamp = self.get_clock().now().to_msg()
                 odom_trans.header.frame_id = 'odom'
-
-                if self.conn_mode == 'single':
-                    odom_trans.child_frame_id = "base_link"
-                else:
-                    odom_trans.child_frame_id = f"robot{str(i)}/base_link"
+                odom_trans.child_frame_id = 'base_link'
 
                 odom_trans.transform.translation.x = self.robot_odom[str(
                     i)]['data']['pose']['position']['x']
@@ -302,12 +263,7 @@ class RobotBaseNode(Node):
                 odom_msg = Odometry()
                 odom_msg.header.stamp = self.get_clock().now().to_msg()
                 odom_msg.header.frame_id = 'odom'
-
-                if self.conn_mode == 'single':
-                    odom_msg.child_frame_id = "base_link"
-
-                else:
-                    odom_msg.child_frame_id = f"robot{str(i)}/base_link"
+                odom_msg.child_frame_id = 'base_link'
 
                 odom_msg.pose.pose.position.x = self.robot_odom[str(
                     i)]['data']['pose']['position']['x']
@@ -415,20 +371,12 @@ class RobotBaseNode(Node):
                     3
                 )
 
-                if self.conn_mode == 'single':
-                    joint_state.name = [
-                        'FL_hip_joint', 'FL_thigh_joint', 'FL_calf_joint',
-                        'FR_hip_joint', 'FR_thigh_joint', 'FR_calf_joint',
-                        'RL_hip_joint', 'RL_thigh_joint', 'RL_calf_joint',
-                        'RR_hip_joint', 'RR_thigh_joint', 'RR_calf_joint',
-                    ]
-                else:
-                    joint_state.name = [
-                        f'robot{str(i)}/FL_hip_joint', f'robot{str(i)}/FL_thigh_joint', f'robot{str(i)}/FL_calf_joint',
-                        f'robot{str(i)}/FR_hip_joint', f'robot{str(i)}/FR_thigh_joint', f'robot{str(i)}/FR_calf_joint',
-                        f'robot{str(i)}/RL_hip_joint', f'robot{str(i)}/RL_thigh_joint', f'robot{str(i)}/RL_calf_joint',
-                        f'robot{str(i)}/RR_hip_joint', f'robot{str(i)}/RR_thigh_joint', f'robot{str(i)}/RR_calf_joint',
-                    ]
+                joint_state.name = [
+                    'FL_hip_joint', 'FL_thigh_joint', 'FL_calf_joint',
+                    'FR_hip_joint', 'FR_thigh_joint', 'FR_calf_joint',
+                    'RL_hip_joint', 'RL_thigh_joint', 'RL_calf_joint',
+                    'RR_hip_joint', 'RR_thigh_joint', 'RR_calf_joint',
+                ]
 
                 joint_state.position = [
                     FL_hip_joint, FL_thigh_joint, FL_calf_joint,

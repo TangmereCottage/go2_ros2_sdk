@@ -33,12 +33,9 @@ class LidarToPointCloud(Node):
     def __init__(self):
         super().__init__('lidar_to_pointcloud')
 
-        self.declare_parameter('robot_ip_lst')
         self.declare_parameter('map_name')
         self.declare_parameter('map_save')
 
-        self.robot_ip_lst = self.get_parameter(
-            'robot_ip_lst').get_parameter_value().string_array_value
         self.map_name = self.get_parameter(
             'map_name').get_parameter_value().string_value
         self.save_map = self.get_parameter(
@@ -51,26 +48,13 @@ class LidarToPointCloud(Node):
             self.get_logger().info(f"Map will be saved")
             self.get_logger().info(f"Map name is {self.map_full_name}")
 
-        self.conn_mode = "single" if len(self.robot_ip_lst) == 1 else "multi"
+        self.subscription = self.create_subscription(
+            PointCloud2,
+            '/point_cloud2',
+            self.lidar_callback,
+            10
+        )
 
-        if self.conn_mode == 'single':
-
-            self.subscription = self.create_subscription(
-                PointCloud2,
-                '/robot0/point_cloud2',
-                self.lidar_callback,
-                10
-            )
-
-        else:
-            for i in range(len(self.robot_ip_lst)):
-                # Subscribe to the PointCloud2 topic
-                self.subscription = self.create_subscription(
-                    PointCloud2,
-                    f'/robot{i}/point_cloud2',
-                    self.lidar_callback,
-                    10
-                )
         self.points = set()
         self.publisher = self.create_publisher(
             PointCloud2, '/pointcloud/deque', 10)
@@ -102,13 +86,11 @@ class LidarToPointCloud(Node):
             self.get_logger().info(
                 f"Saved {len(self.points)} points to {self.map_full_name}.")
 
-
 def main(args=None):
     rclpy.init(args=args)
     node = LidarToPointCloud()
     rclpy.spin(node)
     rclpy.shutdown()
-
 
 if __name__ == '__main__':
     main()

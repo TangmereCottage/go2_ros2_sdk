@@ -45,11 +45,11 @@ Together, let's push the boundaries of what's possible with the Unitree Go2 and 
 
 ## Exciting Features:
 
-:sparkles: Full ROS2 SDK support for your Unitree GO2
+:sparkles: Full ROS2 SDK support for your Unitree Go2
 
 :robot: Compatible with AIR, PRO, and EDU variants
 
-:footprints: Access to foot force sensors feedback (available on some GO2 PRO models or EDU)
+:footprints: Access to foot force sensor feedback (available on some Go2 PRO models or EDU)
 
 
 ## Real time Go2 Air/PRO/EDU joints sync:
@@ -63,7 +63,6 @@ Together, let's push the boundaries of what's possible with the Unitree Go2 and 
 <p align="center">
 <img width="1280" height="640" src="https://github.com/abizovnuralem/go2_ros2_sdk/assets/33475993/9c1c3826-f875-4da1-a650-747044e748e1" alt='Go2 point cloud'>
 </p>
-
 
 ## System requirements
 
@@ -112,7 +111,7 @@ Don't forget to set up your Go2 robot in Wifi-mode and obtain the IP. You can us
 
 ```shell
 source install/setup.bash
-export ROBOT_IP="robot_ip" #for muliple robots, just split by ,
+export ROBOT_IP="robot_ip" #for multiple robots, just split by ,
 export CONN_TYPE="webrtc"
 ros2 launch go2_robot_sdk robot.launch.py
 ```
@@ -130,7 +129,7 @@ The `robot.launch.py` code starts many services/nodes simultaneously, including
 * `twist_mux` (twist_multiplexer with source prioritization)        
 * foxglove_launch (launches the foxglove bridge)
 * slam_toolbox/online_async_launch.py
-* av2_bringup/navigation_launch.py
+* nav2_bringup/navigation_launch.py
 
 When you run `robot.launch.py`, `rviz` will fire up, lidar data will begin to accumulate, the front color camera data will be displayed too (typically after 4 seconds), and your dog will be waiting for commands from your joystick (e.g. a X-box controller). You can then steer the dog through your house, e.g., and collect LIDAR mapping data. 
 
@@ -142,7 +141,7 @@ The goal of SLAM overall, and the `slam_toolbox` in particular, is to create a m
 
 The `rviz` settings that are used upon initial launch (triggered by `ros2 launch go2_robot_sdk robot.launch.py`) showcase various datastreams.  
 
-* `RobotModel` is the dimensionally correct model of the G02 
+* `RobotModel` is the dimensionally correct model of the Go2 
 * `PointCloud2` are the raw LIDAR data transformed into 3D objects/constraints 
 * `LaserScan` are lower level scan data before translation into an x,y,z frame
 * `Image` are the data from the front-facing color camera 
