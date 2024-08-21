@@ -56,18 +56,9 @@ class RobotBaseNode(Node):
         super().__init__('go2_driver_node')
 
         self.declare_parameter('robot_ip', os.getenv('ROBOT_IP', os.getenv('GO2_IP')))
-        self.declare_parameter('token', os.getenv('ROBOT_TOKEN', os.getenv('GO2_TOKEN', '')))
-        self.declare_parameter('conn_type', os.getenv('CONN_TYPE', os.getenv('CONN_TYPE', '')))
-
         self.robot_ip = self.get_parameter('robot_ip').get_parameter_value().string_value
-        self.token = self.get_parameter('token').get_parameter_value().string_value
-        self.conn_type = self.get_parameter('conn_type').get_parameter_value().string_value
-
-        self.conn_mode = "single"
 
         self.get_logger().info(f"Received ip: {self.robot_ip}")
-        self.get_logger().info(f"Connection type is {self.conn_type}")
-        self.get_logger().info(f"Connection mode is {self.conn_mode}")
 
         self.conn = {}
         qos_profile = QoSProfile(depth=10)
@@ -84,8 +75,7 @@ class RobotBaseNode(Node):
         #self.go2_odometry_pub.append(self.create_publisher(Odometry, f'SDK/robot0/odom', qos_profile))
         #self.imu_pub.append(self.create_publisher(IMU, f'SDK/robot0/imu', qos_profile))
 
-        # this is shorthand for the TransformBroadcaster
-        # which will broadcast odom type information?
+        # Broadcast TF information
         self.broadcaster = TransformBroadcaster(self, qos=qos_profile)
 
         self.robot_cmd_vel = {}
@@ -98,39 +88,35 @@ class RobotBaseNode(Node):
 
         self.create_subscription(Twist, 'cmd_vel_out', lambda msg: self.cmd_vel_cb(msg), qos_profile)
         self.create_subscription(Joy, 'joy', self.joy_cb, qos_profile)
-
-        # Support for CycloneDDS (EDU version via ethernet)
-        if self.conn_type == 'cyclonedds':
             
-            # power, temp, IMU state
-            # this feeds into the joint_states, which are needed for the TF
-            self.create_subscription(
-                LowState,
-                'lowstate',
-                self.publish_joint_state_cyclonedds,
-                qos_profile)
+        # power, temp, IMU state
+        # this feeds into the joint_states, which are needed for the TF
+        self.create_subscription(
+            LowState,
+            'lowstate',
+            self.publish_joint_state_cyclonedds,
+            qos_profile)
 
-            # frame_id: odom
-            # postion/orientation
-            self.create_subscription(
-                PoseStamped,
-                '/utlidar/robot_pose',
-                self.publish_body_poss_cyclonedds,
-                qos_profile)
+        # frame_id: odom
+        # postion/orientation
+        self.create_subscription(
+            PoseStamped,
+            '/utlidar/robot_pose',
+            self.publish_body_poss_cyclonedds,
+            qos_profile)
 
-            # subscribe to the raw LIDAR data
-            # frame_id: odom already
-            self.create_subscription(
-                PointCloud2,
-                '/utlidar/cloud_deskewed',
-                self.publish_lidar_cyclonedds,
-                qos_profile)
+        # subscribe to the raw LIDAR data
+        # frame_id: odom already
+        self.create_subscription(
+            PointCloud2,
+            '/utlidar/cloud_deskewed',
+            self.publish_lidar_cyclonedds,
+            qos_profile)
 
     #     self.timer = self.create_timer(0.1, self.timer_callback)
     #     self.timer_lidar = self.create_timer(0.5, self.timer_callback_lidar)
 
     # def timer_callback(self):
-
     # def timer_callback_lidar(self):
 
     def cmd_vel_cb(self, msg):
@@ -179,14 +165,11 @@ class RobotBaseNode(Node):
         self.joint_pub[0].publish(joint_state)
 
     def publish_lidar_cyclonedds(self, msg):
-    #     # manually set the frame_id
-    #     # basically, intercept the /utlidar/cloud
-    #     # add a frame_id: lidar_frame
-    #     # publish as /SDK/robot0/point_cloud2
-    #     # this is based on listening to the raw LIDAR data from '/utlidar/cloud'
-    #     # we could also listen to /utlidar/cloud_deskewed - that uses odom
-    #     # msg.header = Header(frame_id="lidar_frame") # no need because /utlidar/cloud_deskewed directly uses odom
-    #     # msg.header.stamp = self.get_clock().now().to_msg()
+        # NOTE - we are listening to /utlidar/cloud_deskewed - that uses odom already
+        # msg.header = Header(frame_id="lidar_frame") 
+        # no need because /utlidar/cloud_deskewed directly uses odom
+        # msg.header.stamp = self.get_clock().now().to_msg()
+        # no need because the time should be good
         self.go2_lidar_pub[0].publish(msg)
 
     def joy_cmd(self):
@@ -269,7 +252,6 @@ async def start_node():
     )
     
     sleep_task_lst.append(asyncio.get_event_loop().create_task(base_node.run(conn, '0')))
-    #sleep_task_lst.append(asyncio.get_event_loop().create_task(base_node.run(conn)))
     await asyncio.wait([spin_task, *sleep_task_lst], return_when=asyncio.FIRST_COMPLETED)
 
 def main():

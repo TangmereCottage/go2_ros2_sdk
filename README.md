@@ -317,3 +317,11 @@ export ROBOT_IP=192.168.123.99
 ```shell
 ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.1, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 1.0}}"
 ```
+
+
+
+
+
+### 
+
+Make sure the unitree python SDK is instyalled and working 
