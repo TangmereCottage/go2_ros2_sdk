@@ -24,12 +24,10 @@
 import math
 import numpy as np
 
-
 # URDF GO2 real values
 HIP_LENGTH = 0.0955
 THIGH_LENGTH = 0.213
 CALF_LENGTH = 0.2135
-
 
 class Quaternion:
     def __init__(self, x, y, z, w):

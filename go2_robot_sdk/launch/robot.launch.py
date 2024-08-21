@@ -35,12 +35,11 @@ def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time', default='false')
     no_rviz2 = LaunchConfiguration('no_rviz2', default='false')
 
-    robot_token = os.getenv('ROBOT_TOKEN', '') # how does this work for multiple robots?
+    robot_token = os.getenv('ROBOT_TOKEN', '')
     robot_ip = os.getenv('ROBOT_IP', '')
-    robot_ip_lst = robot_ip.replace(" ", "").split(",")
-    print("IP list:", robot_ip_lst)
+    print("IP:", robot_ip)
 
-    conn_mode = "single" if len(robot_ip_lst) == 1 else "multi"
+    conn_mode = "single"
 
     # these are debug only
     map_name = os.getenv('MAP_NAME', '3d_map')
@@ -48,26 +47,26 @@ def generate_launch_description():
 
     conn_type = os.getenv('CONN_TYPE', 'webrtc')
 
-    if conn_mode == 'single':
-        rviz_config = "single_robot_conf.rviz"
-    else:
-        rviz_config = "multi_robot_conf.rviz"
+    rviz_config = "single_robot_conf.rviz"
+    
+    # else:
+    #     rviz_config = "multi_robot_conf.rviz"
 
-    if conn_type == 'cyclonedds':
-        rviz_config = "cyclonedds_config.rviz"
+    # if conn_type == 'cyclonedds':
+    #     rviz_config = "single_robot_conf.rviz"
 
-    urdf_file_name = 'multi_go2.urdf'
-    urdf = os.path.join(
-        get_package_share_directory('go2_robot_sdk'),
-        "urdf",
-        urdf_file_name)
-    with open(urdf, 'r') as infp:
-        robot_desc = infp.read()
+    # urdf_file_name = 'multi_go2.urdf'
+    # urdf = os.path.join(
+    #     get_package_share_directory('go2_robot_sdk'),
+    #     "urdf",
+    #     urdf_file_name)
+    # with open(urdf, 'r') as infp:
+    #     robot_desc = infp.read()
 
-    robot_desc_modified_lst = []
+    # robot_desc_modified_lst = []
 
-    for i in range(len(robot_ip_lst)):
-        robot_desc_modified_lst.append(robot_desc.format(robot_num=f"robot{i}"))
+    # for i in range(len(robot_ip_lst)):
+    #     robot_desc_modified_lst.append(robot_desc.format(robot_num=f"robot{i}"))
 
     urdf_launch_nodes = []
 
@@ -80,11 +79,11 @@ def generate_launch_description():
         get_package_share_directory('go2_robot_sdk'),
         'config', 'twist_mux.yaml')
 
-    foxglove_launch = os.path.join(
-        get_package_share_directory('foxglove_bridge'),
-        'launch',
-        'foxglove_bridge_launch.xml',
-    )
+    # foxglove_launch = os.path.join(
+    #     get_package_share_directory('foxglove_bridge'),
+    #     'launch',
+    #     'foxglove_bridge_launch.xml',
+    # )
 
     slam_toolbox_config = os.path.join(
         get_package_share_directory('go2_robot_sdk'),
@@ -98,91 +97,107 @@ def generate_launch_description():
         'nav2_params.yaml'
     )
 
-    if conn_mode == 'single':
+    # if conn_mode == 'single':
 
-        urdf_file_name = 'go2.urdf'
-        urdf = os.path.join(
-            get_package_share_directory('go2_robot_sdk'),
-            "urdf",
-            urdf_file_name)
-        with open(urdf, 'r') as infp:
-            robot_desc = infp.read()
+    urdf_file_name = 'go2.urdf'
+    urdf = os.path.join(get_package_share_directory('go2_robot_sdk'),"urdf", urdf_file_name)
+    with open(urdf, 'r') as infp:
+        robot_desc = infp.read()
+        print("robot_description\n", robot_desc)
 
-        urdf_launch_nodes.append(
-            Node(
-                package='robot_state_publisher',
-                executable='robot_state_publisher',
-                name='robot_state_publisher',
-                output='screen',
-                parameters=[{'use_sim_time': use_sim_time,
-                             'robot_description': robot_desc}],
-                arguments=[urdf]
-            ),
-        )
-        urdf_launch_nodes.append(
-            Node(
-                package='ros2_go2_video',
-                executable='ros2_go2_video',
-                parameters=[{'robot_ip': robot_ip_lst[0],
-                             'robot_token': robot_token}],
-            ),
-        )
-        urdf_launch_nodes.append(
-            Node(
-                package='pointcloud_to_laserscan',
-                executable='pointcloud_to_laserscan_node',
-                name='pointcloud_to_laserscan',
-                remappings=[
-                    ('cloud_in', 'point_cloud2'),
-                    ('scan', 'scan'),
-                ],
-                parameters=[{
-                    'target_frame': 'base_link',
-                    'max_height': 0.5
-                }],
-                output='screen',
-            ),
-        )
+    urdf_launch_nodes.append(
+        Node(
+            package='robot_state_publisher',
+            executable='robot_state_publisher',
+            name='robot_state_publisher',
+            output='screen',
+            parameters=[{
+                'use_sim_time': use_sim_time, 
+                'robot_description': robot_desc
+            }],
+            arguments=[urdf]
+        ),
+    )        # urdf_launch_nodes.append(
+        #     Node(
+        #         package='ros2_go2_video',
+        #         executable='ros2_go2_video',
+        #         parameters=[{'robot_ip': robot_ip,
+        #                      'robot_token': robot_token}],
+        #     ),
+        # )
 
-    else:
+    # this is giving us a fake laserscan channel?
+    # we are also wiring raw laser data anyway, or could at least
+    # takes /utlidar/cloud_deskewed in, and generates /scan messages
+    urdf_launch_nodes.append(
+        Node(
+            package='pointcloud_to_laserscan',
+            executable='pointcloud_to_laserscan_node',
+            name='pointcloud_to_laserscan',
+            remappings=[('cloud_in', '/utlidar/cloud_deskewed'),('scan', 'scan')],
+            parameters=[{
+                'target_frame': 'base_link', 
+                'min_height': 0.05,
+                'max_height': 0.50,
+                'range_min': 0.0,
+                'range_max': 4.0,
+            }],
+            output='screen',
+        ),
+    )
 
-        for i in range(len(robot_ip_lst)):
-            urdf_launch_nodes.append(
-                Node(
-                    package='robot_state_publisher',
-                    executable='robot_state_publisher',
-                    name='robot_state_publisher',
-                    output='screen',
-                    namespace=f"robot{i}",
-                    parameters=[{'use_sim_time': use_sim_time,
-                                 'robot_description': robot_desc_modified_lst[i]}],
-                    arguments=[urdf]
-                ),
-            )
-            urdf_launch_nodes.append(
-                Node(
-                    package='ros2_go2_video',
-                    executable='ros2_go2_video',
-                    parameters=[{'robot_ip': robot_ip_lst[i],
-                                 'robot_token': robot_token}],
-                ),
-            )
-            urdf_launch_nodes.append(
-                Node(
-                    package='pointcloud_to_laserscan',
-                    executable='pointcloud_to_laserscan_node',
-                    name='pointcloud_to_laserscan',
-                    remappings=[
-                        ('cloud_in', f'robot{i}/point_cloud2'),
-                        ('scan', f'robot{i}/scan'),
-                    ],
-                    parameters=[{
-                        'target_frame': f'robot{i}/base_link',
-                        'max_height': 0.1
-                    }],
-                    output='screen',
-                ),
-            )
+    # min_height (double, default: 2.2e-308) - The minimum height to sample in the point cloud in meters.
+    # max_height (double, default: 1.8e+308) - The maximum height to sample in the point cloud in meters.
+    # angle_min (double, default: -π) - The minimum scan angle in radians.
+    # angle_max (double, default: π) - The maximum scan angle in radians.
+    # angle_increment (double, default: π/180) - Resolution of laser scan in radians per ray.
+    # queue_size (double, default: detected number of cores) - Input point cloud queue size.
+    # scan_time (double, default: 1.0/30.0) - The scan rate in seconds. Only used to populate the scan_time field of the output laser scan message.
+    # range_min (double, default: 0.0) - The minimum ranges to return in meters.
+    # range_max (double, default: 1.8e+308) - The maximum ranges to return in meters.
+    # target_frame (str, default: none) - If provided, transform the pointcloud into this frame before converting to a laser scan. Otherwise, laser scan will be generated in the same frame as the input point cloud.
+    # transform_tolerance (double, default: 0.01) - Time tolerance for transform lookups. Only used if a target_frame is provided.
+    # use_inf (boolean, default: true) - If disabled, report infinite range (no obstacle) as range_max + 1. Otherwise report infinite range as +inf.
+
+    # else:
+
+    #     for i in range(len(robot_ip_lst)):
+    #         urdf_launch_nodes.append(
+    #             Node(
+    #                 package='robot_state_publisher',
+    #                 executable='robot_state_publisher',
+    #                 name='robot_state_publisher',
+    #                 output='screen',
+    #                 namespace=f"robot{i}",
+    #                 parameters=[{'use_sim_time': use_sim_time,
+    #                              'robot_description': robot_desc_modified_lst[i]}],
+    #                 arguments=[urdf]
+    #             ),
+    #         )
+    #         urdf_launch_nodes.append(
+    #             Node(
+    #                 package='ros2_go2_video',
+    #                 executable='ros2_go2_video',
+    #                 parameters=[{'robot_ip': robot_ip_lst[i],
+    #                              'robot_token': robot_token}],
+    #             ),
+    #         )
+            # urdf_launch_nodes.append(
+            #     Node(
+            #         package='pointcloud_to_laserscan',
+            #         executable='pointcloud_to_laserscan_node',
+            #         name='pointcloud_to_laserscan',
+            #         remappings=[
+            #             ('cloud_in', f'robot{i}/point_cloud2'),
+            #             ('scan', f'robot{i}/scan'),
+            #         ],
+            #         parameters=[{
+            #             'target_frame': f'robot{i}/base_link',
+            #             'max_height': 0.1
+            #         }],
+            #         output='screen',
+            #     ),
+            # )
 
     return LaunchDescription([
 
@@ -190,12 +205,16 @@ def generate_launch_description():
         Node(
             package='go2_robot_sdk',
             executable='go2_driver_node',
-            parameters=[{'robot_ip': robot_ip, 'token': robot_token, "conn_type": conn_type}],
+            parameters=[{
+                'robot_ip': robot_ip, 
+                'token': robot_token, 
+                'conn_type': conn_type
+            }],
         ),
         Node(
             package='go2_robot_sdk',
-            executable='lidar_to_pointcloud',
-            parameters=[{'robot_ip_lst': robot_ip_lst, 'map_name': map_name, 'map_save': save_map}],
+            executable='camera_to_image',
+            parameters=[{'robot_interface': 'eno3'}],
         ),
         Node(
             package='rviz2',
@@ -220,15 +239,12 @@ def generate_launch_description():
             package='twist_mux',
             executable='twist_mux',
             output='screen',
-            parameters=[
-                {'use_sim_time': use_sim_time},
-                default_config_topics
-            ],
+            parameters=[{'use_sim_time': use_sim_time}, default_config_topics],
         ),
 
-        IncludeLaunchDescription(
-            FrontendLaunchDescriptionSource(foxglove_launch)
-        ),
+        # IncludeLaunchDescription(
+        #     FrontendLaunchDescriptionSource(foxglove_launch)
+        # ),
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource([
