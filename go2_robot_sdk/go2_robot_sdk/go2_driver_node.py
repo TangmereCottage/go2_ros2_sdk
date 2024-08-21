@@ -26,6 +26,9 @@ import logging
 import os
 import threading
 import asyncio
+import time
+import sys
+import math
 
 from scripts.go2_constants import ROBOT_CMD, RTC_TOPIC
 from scripts.go2_func import gen_command, gen_mov_command
@@ -41,10 +44,20 @@ from tf2_ros import TransformBroadcaster, TransformStamped
 from geometry_msgs.msg import Twist, TransformStamped, PoseStamped
 from go2_interfaces.msg import Go2State, IMU
 from unitree_go.msg import LowState
+
 from sensor_msgs.msg import PointCloud2, PointField, JointState, Joy
 from sensor_msgs_py import point_cloud2
 from std_msgs.msg import Header
 from nav_msgs.msg import Odometry
+
+from unitree_sdk2py.core.channel import ChannelSubscriber, ChannelFactoryInitialize
+from unitree_sdk2py.idl.default import unitree_go_msg_dds__SportModeState_
+from unitree_sdk2py.idl.unitree_go.msg.dds_ import SportModeState_
+from unitree_sdk2py.go2.sport.sport_client import (
+    SportClient,
+    PathPoint,
+    SPORT_PATH_POINT_SIZE,
+)
 
 logging.basicConfig(level=logging.WARN)
 logger = logging.getLogger(__name__)
@@ -57,11 +70,24 @@ class RobotBaseNode(Node):
 
         self.declare_parameter('robot_ip', os.getenv('ROBOT_IP', os.getenv('GO2_IP')))
         self.robot_ip = self.get_parameter('robot_ip').get_parameter_value().string_value
-
         self.get_logger().info(f"Received ip: {self.robot_ip}")
 
         self.conn = {}
         qos_profile = QoSProfile(depth=10)
+
+        # movement
+        # Time count
+        self.t = 0
+        self.dt = 0.01
+
+        # Initial poition and yaw
+        self.px0 = 0
+        self.py0 = 0
+        self.yaw0 = 0
+
+        self.client = SportClient()  # Create a sport client
+        self.client.SetTimeout(10.0)
+        self.client.Init()
 
         self.joint_pub = []
         #self.go2_state_pub = []
@@ -113,20 +139,20 @@ class RobotBaseNode(Node):
             self.publish_lidar_cyclonedds,
             qos_profile)
 
-    #     self.timer = self.create_timer(0.1, self.timer_callback)
-    #     self.timer_lidar = self.create_timer(0.5, self.timer_callback_lidar)
-
-    # def timer_callback(self):
-    # def timer_callback_lidar(self):
+    def GetInitState(self, robot_state: SportModeState_):
+        self.px0 = robot_state.position[0]
+        self.py0 = robot_state.position[1]
+        self.yaw0 = robot_state.imu_state.rpy[2]
 
     def cmd_vel_cb(self, msg):
-
-        x = msg.linear.x
-        y = msg.linear.y
-        z = msg.angular.z
-
+        x = round(msg.linear.x, 2)
+        y = round(msg.linear.y, 2)
+        z = round(msg.angular.z, 2)
         if x > 0.0 or y > 0.0 or z != 0.0:
-            self.robot_cmd_vel = gen_mov_command(round(x, 2), round(y, 2), round(z, 2))
+            self.get_logger().info(f"Move {self.robot_cmd_vel}")
+            self.client.Move(x, y, z)  # vx, vy vyaw
+            time.sleep(0.1)
+            self.client.StopMove()
 
     def joy_cb(self, msg):
         self.joy_state = msg
@@ -173,27 +199,25 @@ class RobotBaseNode(Node):
         self.go2_lidar_pub[0].publish(msg)
 
     def joy_cmd(self):
-        if self.robot_cmd_vel != None:
-            self.get_logger().info(f"Move {self.robot_cmd_vel}")
-            #self.conn.data_channel.send(self.robot_cmd_vel)
-            self.robot_cmd_vel = None
-
+        # Sit Down
+        # Button B
         if self.joy_state.buttons and self.joy_state.buttons[1]:
-            self.get_logger().info("Stand down")
-            stand_down_cmd = gen_command(ROBOT_CMD["StandDown"])
-            #self.conn.data_channel.send(stand_down_cmd)
+            self.get_logger().info("Sit down")
+            self.client.StandDown()
 
+        # Stand Up
+        # Button A
         if self.joy_state.buttons and self.joy_state.buttons[0]:
             self.get_logger().info("Stand up")
-            stand_up_cmd = gen_command(ROBOT_CMD["StandUp"])
-            #self.conn.data_channel.send(stand_up_cmd)
-            move_cmd = gen_command(ROBOT_CMD['BalanceStand'])
-            #self.conn.data_channel.send(move_cmd)
+            self.client.StandUp()
+            time.sleep(0.3)        
+            self.client.Euler(0.1, 0.2, 0.3)  # roll, pitch, yaw
+            time.sleep(0.3)  
+            self.client.BalanceStand()
 
     def on_validated(self):
         for topic in RTC_TOPIC.values():
             self.get_logger().info(f"topic: {topic}")
-            #self.conn.data_channel.send(json.dumps({"type": "subscribe", "topic": topic}))
 
     # add messages to lidar/odom etc
     def on_data_channel_message(self, _, msg):
@@ -238,15 +262,29 @@ async def spin(node: Node):
     spin_thread.join()
     node.destroy_guard_condition(cancel)
 
+# Robot state
+robot_state = unitree_go_msg_dds__SportModeState_()
+def HighStateHandler(msg: SportModeState_):
+    global robot_state
+    robot_state = msg
+
 async def start_node():
+    
+    ChannelFactoryInitialize(0, 'eno3')
+    
+    sub = ChannelSubscriber("rt/sportmodestate", SportModeState_)
+    sub.Init(HighStateHandler, 10)
+    time.sleep(1)
+
     base_node = RobotBaseNode()
+
     spin_task = asyncio.get_event_loop().create_task(spin(base_node))
     sleep_task_lst = []
 
     conn = Go2Connection(
         robot_ip=base_node.robot_ip,
         robot_num='0',
-        token=base_node.token,
+        token='',
         on_validated=base_node.on_validated,
         on_message=base_node.on_data_channel_message,
     )
