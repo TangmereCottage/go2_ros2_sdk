@@ -148,8 +148,8 @@ class RobotBaseNode(Node):
         x = round(msg.linear.x, 2)
         y = round(msg.linear.y, 2)
         z = round(msg.angular.z, 2)
-        if x > 0.0 or y > 0.0 or z != 0.0:
-            self.get_logger().info(f"Move {self.robot_cmd_vel}")
+        if x > 0.01 or x < -0.01 or y > 0.01 or y < -0.01 or z > 0.01 or z < -0.01:
+            self.get_logger().info(f"Move {x, y, z}")
             self.client.Move(x, y, z)  # vx, vy vyaw
             time.sleep(0.1)
             self.client.StopMove()
