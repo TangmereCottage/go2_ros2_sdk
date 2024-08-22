@@ -120,7 +120,18 @@ def generate_launch_description():
         Node(
             package='go2_robot_sdk',
             executable='camera_to_image',
-            parameters=[{'robot_interface': robot_interface}],
+            parameters=[{
+                'robot_interface': robot_interface,
+            }],
+        ),
+        Node(
+            package='coco_detector',
+            executable='coco_detector_node',
+            parameters=[{
+                'publish_annotated_image': True,
+                'device': 'cuda',
+                'detection_threshold': 0.7
+            }],
         ),
         Node(
             package='rviz2',

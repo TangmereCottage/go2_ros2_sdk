@@ -22,7 +22,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import rclpy # Python Client Library for ROS 2
-from rclpy.node import Node
 from rclpy.node import Node # Handles the creation of nodes
 from sensor_msgs.msg import Image # Image is the message type
 
@@ -39,21 +38,13 @@ class ImagePublisher(Node):
   """
   Create an ImagePublisher class, which is a subclass of the Node class.
   """
-
-        # self.declare_parameter('robot_ip')
-        # # self.declare_parameter('map_name')
-        # # self.declare_parameter('map_save')
-
-        # self.robot_ip = self.get_parameter(
-        #     'robot_ip').get_parameter_value().string_array_value
-
   def __init__(self):
 
     super().__init__('image_publisher')
      
     # Publisher will publish an Image to the images topic. 
     # The queue size is 10 messages.
-    self.publisher_ = self.create_publisher(Image, 'images', 10)
+    self.publisher_ = self.create_publisher(Image, 'image', 10)
       
     # Publish a message every 0.1 seconds
     timer_period = 0.1
@@ -75,18 +66,15 @@ class ImagePublisher(Node):
     code, data = self.client.GetImageSample()
 
     if code != 0:
-        self.get_logger().info(f'Video image error: {code}')
+        self.get_logger().info(f'Video error: {code}')
     else:
         image_data = np.frombuffer(bytes(data), dtype=np.uint8)
         image = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
         # Here we have the raw image for us to work with 
-        
-        # Do stuff to image here
-
         # The 'cv2_to_imgmsg' method converts an OpenCV
         # image to a ROS 2 image message
         self.publisher_.publish(self.br.cv2_to_imgmsg(image))
-        self.get_logger().info('Publishing video frame')
+        # self.get_logger().info('Publishing video frame')
 
 def main(args=None):
   

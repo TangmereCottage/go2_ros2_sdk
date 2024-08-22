@@ -30,24 +30,29 @@ class CocoDetectorNode(Node):
     # pylint: disable=R0902 disable too many instance variables warning for this class
     def __init__(self):
         super().__init__("coco_detector_node")
+        
         self.declare_parameter('device', 'cpu')
         self.declare_parameter('detection_threshold', 0.9)
         self.declare_parameter('publish_annotated_image', True)
+        
         self.device = self.get_parameter('device').get_parameter_value().string_value
         self.detection_threshold = \
             self.get_parameter('detection_threshold').get_parameter_value().double_value
         self.subscription = self.create_subscription(
             Image,
-            "/go2_camera/color/image",
+            "/image",
             self.listener_callback,
             10)
+
         self.detected_objects_publisher = \
-            self.create_publisher(Detection2DArray, "detected_objects", 10)
+            self.create_publisher(Detection2DArray, "image_detected_objects", 10)
+        
         if self.get_parameter('publish_annotated_image').get_parameter_value().bool_value:
             self.annotated_image_publisher = \
-                self.create_publisher(Image, "annotated_image", 10)
+                self.create_publisher(Image, "image_annotated", 10)
         else:
             self.annotated_image_publisher = None
+
         self.bridge = CvBridge()
         self.model = detection_model.fasterrcnn_mobilenet_v3_large_320_fpn(
             weights="FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.COCO_V1",
@@ -56,7 +61,7 @@ class CocoDetectorNode(Node):
         self.class_labels = \
             detection_model.FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.DEFAULT.meta["categories"]
         self.model.eval()
-        self.get_logger().info("Node has started.")
+        self.get_logger().info("Node has started")
 
     def mobilenet_to_ros2(self, detection, header):
         """Converts a Detection tuple(label, bbox, score) to a ROS2 Detection2D message."""
@@ -84,12 +89,16 @@ class CocoDetectorNode(Node):
         if len(filtered_detections) > 0:
             pred_boxes = torch.stack([detection.bbox for detection in filtered_detections])
             pred_labels = [self.class_labels[detection.label] for detection in filtered_detections]
-            annotated_image = draw_bounding_boxes(torch.tensor(image), pred_boxes,
-                                                  pred_labels, colors="yellow")
+            annotated_image = draw_bounding_boxes(
+                torch.tensor(image), 
+                pred_boxes,
+                pred_labels, 
+                colors="yellow")
         else:
             annotated_image = torch.tensor(image)
-        ros2_image_msg = self.bridge.cv2_to_imgmsg(annotated_image.numpy().transpose(1, 2, 0),
-                                                   encoding="rgb8")
+        ros2_image_msg = self.bridge.cv2_to_imgmsg(
+            annotated_image.numpy().transpose(1, 2, 0),
+            encoding="rgb8")
         ros2_image_msg.header = header
         self.annotated_image_publisher.publish(ros2_image_msg)
 
@@ -111,7 +120,6 @@ class CocoDetectorNode(Node):
         self.detected_objects_publisher.publish(detection_array)
         if self.annotated_image_publisher is not None:
             self.publish_annotated_image(filtered_detections, msg.header, image)
-
 
 rclpy.init()
 coco_detector_node = CocoDetectorNode()

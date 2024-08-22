@@ -52,7 +52,8 @@ setup(
     entry_points={
         'console_scripts': [
             'go2_driver_node = go2_robot_sdk.go2_driver_node:main',
-            'camera_to_image = go2_robot_sdk.camera_to_image:main'
+            'camera_to_image = go2_robot_sdk.camera_to_image:main',
+            'coco_detector_node = go2_robot_sdk.coco_detector_node:main'
         ],
     },
 )
