@@ -38,6 +38,7 @@ class CocoDetectorNode(Node):
         self.device = self.get_parameter('device').get_parameter_value().string_value
         self.detection_threshold = \
             self.get_parameter('detection_threshold').get_parameter_value().double_value
+        
         self.subscription = self.create_subscription(
             Image,
             "/image",
@@ -48,8 +49,7 @@ class CocoDetectorNode(Node):
             self.create_publisher(Detection2DArray, "image_detected_objects", 10)
         
         if self.get_parameter('publish_annotated_image').get_parameter_value().bool_value:
-            self.annotated_image_publisher = \
-                self.create_publisher(Image, "image_annotated", 10)
+            self.annotated_image_publisher = self.create_publisher(Image, "image_annotated", 10)
         else:
             self.annotated_image_publisher = None
 
@@ -98,13 +98,14 @@ class CocoDetectorNode(Node):
             annotated_image = torch.tensor(image)
         ros2_image_msg = self.bridge.cv2_to_imgmsg(
             annotated_image.numpy().transpose(1, 2, 0),
-            encoding="rgb8")
+            encoding="bgr8")
         ros2_image_msg.header = header
         self.annotated_image_publisher.publish(ros2_image_msg)
 
     def listener_callback(self, msg):
         """Reads image and publishes on /detected_objects and /annotated_image."""
-        cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="rgb8")
+        cv_image = self.bridge.imgmsg_to_cv2(msg)
+        # self.get_logger().info("Have image")
         image = cv_image.copy().transpose((2, 0, 1))
         batch_image = np.expand_dims(image, axis=0)
         tensor_image = torch.tensor(batch_image/255.0, dtype=torch.float, device=self.device)
@@ -121,8 +122,21 @@ class CocoDetectorNode(Node):
         if self.annotated_image_publisher is not None:
             self.publish_annotated_image(filtered_detections, msg.header, image)
 
-rclpy.init()
-coco_detector_node = CocoDetectorNode()
-rclpy.spin(coco_detector_node)
-coco_detector_node.destroy_node()
-rclpy.shutdown()
+def main(args=None):
+  
+    # Initialize the rclpy library
+    rclpy.init(args=args)
+
+    coco_detector_node = CocoDetectorNode()
+
+    # Spin the node so the callback function is called.
+    rclpy.spin(coco_detector_node)
+
+    # Destroy the node explicitly
+    coco_detector_node.destroy_node()
+    
+    # Shutdown the ROS client library for Python
+    rclpy.shutdown()
+  
+if __name__ == '__main__':
+  main()

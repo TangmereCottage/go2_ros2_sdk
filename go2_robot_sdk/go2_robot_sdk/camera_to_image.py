@@ -24,6 +24,7 @@
 import rclpy # Python Client Library for ROS 2
 from rclpy.node import Node # Handles the creation of nodes
 from sensor_msgs.msg import Image # Image is the message type
+from std_msgs.msg import Header
 
 from unitree_sdk2py.core.channel import ChannelFactoryInitialize
 from unitree_sdk2py.go2.video.video_client import VideoClient
@@ -73,7 +74,11 @@ class ImagePublisher(Node):
         # Here we have the raw image for us to work with 
         # The 'cv2_to_imgmsg' method converts an OpenCV
         # image to a ROS 2 image message
-        self.publisher_.publish(self.br.cv2_to_imgmsg(image))
+        image_ROS2 = self.br.cv2_to_imgmsg(image, encoding='bgr8')
+        image_ROS2.header = Header(frame_id="video_frame") 
+        image_ROS2.header.stamp = self.get_clock().now().to_msg()
+
+        self.publisher_.publish(image_ROS2)
         # self.get_logger().info('Publishing video frame')
 
 def main(args=None):

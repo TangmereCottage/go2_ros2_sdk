@@ -6,9 +6,11 @@ Panels:
       Expanded:
         - /PointCloud21/Topic1
         - /LaserScan1/Topic1
+        - /Image1
         - /Image1/Topic1
         - /TF1/Frames1
         - /TF1/Tree1
+        - /ImageWithClassification1
       Splitter Ratio: 0.4994652271270752
     Tree Height: 395
   - Class: rviz_common/Selection
@@ -255,9 +257,9 @@ Visualization Manager:
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 255
+      Max Intensity: 227
       Min Color: 0; 0; 0
-      Min Intensity: 68
+      Min Intensity: 35
       Name: PointCloud2
       Position Transformer: XYZ
       Selectable: true
@@ -320,7 +322,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /images
+        Value: /image
       Value: true
     - Alpha: 0.699999988079071
       Class: rviz_default_plugins/Map
@@ -616,7 +618,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /annotated_image
+        Value: /image_annotated
       Value: true
   Enabled: true
   Global Options:

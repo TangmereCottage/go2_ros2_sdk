@@ -125,7 +125,7 @@ def generate_launch_description():
             }],
         ),
         Node(
-            package='coco_detector',
+            package='go2_robot_sdk',
             executable='coco_detector_node',
             parameters=[{
                 'publish_annotated_image': True,
