@@ -30,11 +30,11 @@ import time
 import sys
 import math
 
-from scripts.go2_constants import ROBOT_CMD, RTC_TOPIC
-from scripts.go2_func import gen_command, gen_mov_command
-from scripts.go2_lidar_decoder import update_meshes_for_cloud2
-from scripts.go2_math import get_robot_joints
-from scripts.webrtc_driver import Go2Connection
+# from scripts.go2_constants import ROBOT_CMD, RTC_TOPIC
+# from scripts.go2_func import gen_command, gen_mov_command
+# from scripts.go2_lidar_decoder import update_meshes_for_cloud2
+# from scripts.go2_math import get_robot_joints
+# from scripts.webrtc_driver import Go2Connection
 
 import rclpy
 from rclpy.node import Node
@@ -42,10 +42,10 @@ from rclpy.qos import QoSProfile
 
 from tf2_ros import TransformBroadcaster, TransformStamped
 from geometry_msgs.msg import Twist, TransformStamped, PoseStamped
-from go2_interfaces.msg import Go2State, IMU
+
 from unitree_go.msg import LowState
 
-from sensor_msgs.msg import PointCloud2, PointField, JointState, Joy
+from sensor_msgs.msg import PointCloud2, PointField, JointState, Joy, Imu
 from sensor_msgs_py import point_cloud2
 from std_msgs.msg import Header
 from nav_msgs.msg import Odometry
@@ -72,7 +72,7 @@ class RobotBaseNode(Node):
         self.robot_ip = self.get_parameter('robot_ip').get_parameter_value().string_value
         self.get_logger().info(f"Received ip: {self.robot_ip}")
 
-        self.conn = {}
+        # self.conn = {}
         qos_profile = QoSProfile(depth=10)
 
         # movement
@@ -91,15 +91,15 @@ class RobotBaseNode(Node):
 
         self.joint_pub = []
         #self.go2_state_pub = []
-        self.go2_lidar_pub = []
-        #self.go2_odometry_pub = []
-        #self.imu_pub = []
+        self.lidar_pub = []
+        self.odometry_pub = []
+        self.imu_pub = []
 
         self.joint_pub.append(self.create_publisher(JointState, 'joint_states', qos_profile))
         #self.go2_state_pub.append(self.create_publisher(Go2State, f'SDK/robot0/go2_states', qos_profile))
-        self.go2_lidar_pub.append(self.create_publisher(PointCloud2, 'point_cloud2', qos_profile))
-        #self.go2_odometry_pub.append(self.create_publisher(Odometry, f'SDK/robot0/odom', qos_profile))
-        #self.imu_pub.append(self.create_publisher(IMU, f'SDK/robot0/imu', qos_profile))
+        self.lidar_pub.append(self.create_publisher(PointCloud2, 'point_cloud2', qos_profile))
+        self.odometry_pub.append(self.create_publisher(Odometry, 'odom', qos_profile))
+        self.imu_pub.append(self.create_publisher(Imu, 'imu', qos_profile))
 
         # Broadcast TF information
         self.broadcaster = TransformBroadcaster(self, qos=qos_profile)
@@ -110,11 +110,16 @@ class RobotBaseNode(Node):
         self.robot_sport_state = {}
         self.robot_lidar = {}
 
-        self.joy_state = Joy()
-
+        # control overview
+        # /joy            # from joystick
+        # /cmd_vel_out    # from the mux, flowing into the move command
+        # /cmd_vel_joy    # from joystick
+        # /cmd_vel_nav    # from nv2
         self.create_subscription(Twist, 'cmd_vel_out', lambda msg: self.cmd_vel_cb(msg), qos_profile)
+
+        self.joy_state = Joy()
         self.create_subscription(Joy, 'joy', self.joy_cb, qos_profile)
-            
+
         # power, temp, IMU state
         # this feeds into the joint_states, which are needed for the TF
         self.create_subscription(
@@ -131,31 +136,51 @@ class RobotBaseNode(Node):
             self.publish_body_poss_cyclonedds,
             qos_profile)
 
+        # frame_id: odom
+        # odom
+        self.create_subscription(
+            Odometry,
+            '/utlidar/robot_odom',
+            self.publish_odom_cyclonedds,
+            qos_profile)
+
+        self.create_subscription(
+            Imu,
+            '/utlidar/imu',
+            self.publish_imu_cyclonedds,
+            qos_profile)
+
         # subscribe to the raw LIDAR data
         # frame_id: odom already
         self.create_subscription(
             PointCloud2,
             '/utlidar/cloud_deskewed',
+            #'/utlidar/cloud',
             self.publish_lidar_cyclonedds,
             qos_profile)
+
+    # subscribe to /joy and send those data to self.joy_state
+    def joy_cb(self, msg):
+        self.joy_state = msg
 
     def GetInitState(self, robot_state: SportModeState_):
         self.px0 = robot_state.position[0]
         self.py0 = robot_state.position[1]
         self.yaw0 = robot_state.imu_state.rpy[2]
 
+    # subscribe to Twist /cmd_vel_out and if there are non-zero values, move the dog
+    # movement is based on /cmd_vel_out and not directly on /joy
+    # so the movement data must flow from /joy to someone else and then to /cmd_vel_out 
     def cmd_vel_cb(self, msg):
         x = round(msg.linear.x, 2)
         y = round(msg.linear.y, 2)
         z = round(msg.angular.z, 2)
-        if x > 0.01 or x < -0.01 or y > 0.01 or y < -0.01 or z > 0.01 or z < -0.01:
+        deadband = 0.02
+        if abs(x) > deadband or abs(y) > deadband or abs(z) > deadband:
             self.get_logger().info(f"Move {x, y, z}")
             self.client.Move(x, y, z)  # vx, vy vyaw
             time.sleep(0.1)
             self.client.StopMove()
-
-    def joy_cb(self, msg):
-        self.joy_state = msg
 
     def publish_body_poss_cyclonedds(self, msg):
         odom_trans = TransformStamped()
@@ -192,11 +217,28 @@ class RobotBaseNode(Node):
 
     def publish_lidar_cyclonedds(self, msg):
         # NOTE - we are listening to /utlidar/cloud_deskewed - that uses odom already
-        # msg.header = Header(frame_id="lidar_frame") 
+        # msg.header = Header(frame_id="odom") 
         # no need because /utlidar/cloud_deskewed directly uses odom
         # msg.header.stamp = self.get_clock().now().to_msg()
         # no need because the time should be good
-        self.go2_lidar_pub[0].publish(msg)
+        self.lidar_pub[0].publish(msg)
+
+    def publish_imu_cyclonedds(self, msg):
+        # NOTE - we are listening to /utlidar/cloud_deskewed - that uses odom already
+        # 'sensor_msgs/msg/Imu'
+        # msg.header = Header(frame_id="odom") 
+        # no need because /utlidar/cloud_deskewed directly uses odom
+        # msg.header.stamp = self.get_clock().now().to_msg()
+        # no need because the time should be good
+        self.imu_pub[0].publish(msg)
+
+    def publish_odom_cyclonedds(self, msg):
+        # NOTE - we are listening to /utlidar/cloud_deskewed - that uses odom already
+        # msg.header = Header(frame_id="odom") 
+        # no need because /utlidar/cloud_deskewed directly uses odom
+        # msg.header.stamp = self.get_clock().now().to_msg()
+        # no need because the time should be good
+        self.odometry_pub[0].publish(msg)
 
     def joy_cmd(self):
         # Sit Down
@@ -215,30 +257,36 @@ class RobotBaseNode(Node):
             time.sleep(0.3)  
             self.client.BalanceStand()
 
-    def on_validated(self):
-        for topic in RTC_TOPIC.values():
-            self.get_logger().info(f"topic: {topic}")
+    # def on_validated(self):
+    #     for topic in RTC_TOPIC.values():
+    #         self.get_logger().info(f"topic: {topic}")
 
-    # add messages to lidar/odom etc
-    def on_data_channel_message(self, _, msg):
+    # # add messages to lidar/odom etc
+    # def on_data_channel_message(self, _, msg):
         
-        self.get_logger().info(f"message: {msg}")
+    #     self.get_logger().info(f"message: {msg}")
         
-        if msg.get('topic') == RTC_TOPIC["ULIDAR_ARRAY"]:
-            self.robot_lidar = msg
+    #     if msg.get('topic') == RTC_TOPIC["ULIDAR_ARRAY"]:
+    #         self.robot_lidar = msg
 
-        if msg.get('topic') == RTC_TOPIC['ROBOTODOM']:
-            self.robot_odom = msg
+    #     if msg.get('topic') == RTC_TOPIC['ROBOTODOM']:
+    #         self.robot_odom = msg
 
-        if msg.get('topic') == RTC_TOPIC['LF_SPORT_MOD_STATE']:
-            self.robot_sport_state = msg
+    #     if msg.get('topic') == RTC_TOPIC['LF_SPORT_MOD_STATE']:
+    #         self.robot_sport_state = msg
 
-        if msg.get('topic') == RTC_TOPIC['LOW_STATE']:
-            self.robot_low_cmd = msg
+    #     if msg.get('topic') == RTC_TOPIC['LOW_STATE']:
+    #         self.robot_low_cmd = msg
 
-    async def run(self, conn, robot_num):
-        self.conn[robot_num] = conn
+    # async def run(self, conn, robot_num):
+    #     self.conn[robot_num] = conn
+    #     while True:
+    #         self.joy_cmd()
+    #         await asyncio.sleep(0.1)
+
+    async def run(self):
         while True:
+            # deals with standing up and sitting down only 
             self.joy_cmd()
             await asyncio.sleep(0.1)
 
@@ -281,15 +329,15 @@ async def start_node():
     spin_task = asyncio.get_event_loop().create_task(spin(base_node))
     sleep_task_lst = []
 
-    conn = Go2Connection(
-        robot_ip=base_node.robot_ip,
-        robot_num='0',
-        token='',
-        on_validated=base_node.on_validated,
-        on_message=base_node.on_data_channel_message,
-    )
+    # conn = Go2Connection(
+    #     robot_ip=base_node.robot_ip,
+    #     robot_num='0',
+    #     token='',
+    #     on_validated=base_node.on_validated,
+    #     on_message=base_node.on_data_channel_message,
+    # )
     
-    sleep_task_lst.append(asyncio.get_event_loop().create_task(base_node.run(conn, '0')))
+    sleep_task_lst.append(asyncio.get_event_loop().create_task(base_node.run()))
     await asyncio.wait([spin_task, *sleep_task_lst], return_when=asyncio.FIRST_COMPLETED)
 
 def main():

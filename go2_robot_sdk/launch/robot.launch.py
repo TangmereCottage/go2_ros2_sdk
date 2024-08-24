@@ -26,16 +26,16 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.conditions import UnlessCondition
 from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import Node
-from launch.actions import IncludeLaunchDescription
+from launch_ros.actions import Node, SetRemap
+from launch.actions import IncludeLaunchDescription, GroupAction
 from launch.launch_description_sources import FrontendLaunchDescriptionSource, PythonLaunchDescriptionSource
 
 def generate_launch_description():
 
     use_sim_time = LaunchConfiguration('use_sim_time', default='false')
     no_rviz2 = LaunchConfiguration('no_rviz2', default='false')
-    robot_ip = LaunchConfiguration('no_rviz2', default='192.168.123.99')
-    robot_interface = LaunchConfiguration('no_rviz2', default='eno3')
+    robot_ip = LaunchConfiguration('robot_ip', default='192.168.123.99')
+    robot_interface = LaunchConfiguration('robot_interface', default='eno3')
     rviz_config = "robot_conf.rviz"
     
     urdf_launch_nodes = []
@@ -87,20 +87,21 @@ def generate_launch_description():
         ),
     )
 
-    # this is giving us a fake laserscan channel
+    # this is giving us a synthetic laserscan channel
     # takes /utlidar/cloud_deskewed and generates /scan messages
+    # can we get those more directly, too?
     urdf_launch_nodes.append(
         Node(
             package='pointcloud_to_laserscan',
             executable='pointcloud_to_laserscan_node',
             name='pointcloud_to_laserscan',
-            remappings=[('cloud_in', '/utlidar/cloud_deskewed'),('scan', 'scan')],
+            remappings=[('cloud_in', 'point_cloud2')],
             parameters=[{
                 'target_frame': 'base_link', 
                 'min_height': 0.05,
-                'max_height': 0.50,
-                'range_min': 0.0,
-                'range_max': 4.0,
+                'max_height': 1.00,
+                'range_min':  0.0,
+                'range_max': 10.0,
             }],
             output='screen',
         ),
@@ -141,27 +142,37 @@ def generate_launch_description():
             name='rviz2',
             arguments=['-d' + os.path.join(get_package_share_directory('go2_robot_sdk'), 'config', rviz_config)]
         ),
+
+        # Connects to a joystick and produces /joy messages
+        # publishes /joy (sensor_msgs/msg/Joy)
         Node(
             package='joy',
             executable='joy_node',
             parameters=[joy_params]
         ),
+
+        # converts joy messages to velocity commands
+        # takes     /joy     (sensor_msgs/msg/Joy)
+        # publishes /cmd_vel (geometry_msgs/msg/Twist or /TwistStamped)
+        # reampped to cmd_vel_joy for sanity
         Node(
             package='teleop_twist_joy',
             executable='teleop_node',
             name='teleop_node',
+            remappings=[('cmd_vel', 'cmd_vel_joy')],
             parameters=[default_config_topics],
         ),
+
+        # Take /cmd_vel_nav and /cmd_vel_joy, multiplex them, and send the result to 
+        # /cmd_vel_out?
         Node(
             package='twist_mux',
             executable='twist_mux',
             output='screen',
-            parameters=[{'use_sim_time': use_sim_time}, default_config_topics],
+            parameters=[{
+                'use_sim_time': use_sim_time
+            }, default_config_topics],
         ),
-
-        # IncludeLaunchDescription(
-        #     FrontendLaunchDescriptionSource(foxglove_launch)
-        # ),
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource([
@@ -169,19 +180,24 @@ def generate_launch_description():
                     'slam_toolbox'), 'launch', 'online_async_launch.py')
             ]),
             launch_arguments={
-                'params_file': slam_toolbox_config,
+                'params_file' : slam_toolbox_config,
                 'use_sim_time': use_sim_time,
             }.items(),
         ),
 
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource([
-                os.path.join(get_package_share_directory(
-                    'nav2_bringup'), 'launch', 'navigation_launch.py')
-            ]),
-            launch_arguments={
-                'params_file': nav2_config,
-                'use_sim_time': use_sim_time,
-            }.items(),
-        ),
+        # GroupAction(
+        #     actions=[
+        #         SetRemap(src='/cmd_vel', dst='/cmd_vel_nav'),
+        #         IncludeLaunchDescription(
+        #             PythonLaunchDescriptionSource([
+        #                 os.path.join(get_package_share_directory(
+        #                     'nav2_bringup'), 'launch', 'navigation_launch.py')
+        #             ]),
+        #             launch_arguments={
+        #                 'params_file' : nav2_config,
+        #                 'use_sim_time': use_sim_time,
+        #             }.items(),
+        #         )
+        #     ]
+        # )        
     ])
