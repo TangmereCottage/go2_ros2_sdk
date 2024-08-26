@@ -138,6 +138,7 @@ class RobotBaseNode(Node):
 
         # frame_id: odom
         # odom
+        # straight passthrough 
         self.create_subscription(
             Odometry,
             '/utlidar/robot_odom',
@@ -182,18 +183,20 @@ class RobotBaseNode(Node):
             time.sleep(0.1)
             self.client.StopMove()
 
+    # this is body pose - and this is being sent to TF
+    # coming from '/utlidar/robot_pose'
     def publish_body_poss_cyclonedds(self, msg):
         odom_trans = TransformStamped()
-        odom_trans.header.stamp = self.get_clock().now().to_msg()
+        odom_trans.header.stamp = msg.header.stamp #self.get_clock().now().to_msg()
         odom_trans.header.frame_id = 'odom'
         odom_trans.child_frame_id = 'base_link'
         odom_trans.transform.translation.x = msg.pose.position.x
         odom_trans.transform.translation.y = msg.pose.position.y
         odom_trans.transform.translation.z = msg.pose.position.z
-        odom_trans.transform.rotation.x = msg.pose.orientation.x
-        odom_trans.transform.rotation.y = msg.pose.orientation.y
-        odom_trans.transform.rotation.z = msg.pose.orientation.z
-        odom_trans.transform.rotation.w = msg.pose.orientation.w
+        odom_trans.transform.rotation.x    = msg.pose.orientation.x
+        odom_trans.transform.rotation.y    = msg.pose.orientation.y
+        odom_trans.transform.rotation.z    = msg.pose.orientation.z
+        odom_trans.transform.rotation.w    = msg.pose.orientation.w
         self.broadcaster.sendTransform(odom_trans)
 
     # joint states are angles and therefore do not have/need a frame_id 

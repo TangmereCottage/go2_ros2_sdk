@@ -318,10 +318,8 @@ export ROBOT_IP=192.168.123.99
 ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.1, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 1.0}}"
 ```
 
+so we have three sort of different position/orientation extiamtes 
 
-
-
-
-### 
-
-Make sure the unitree python SDK is instyalled and working 
+/utlidar/robot_odom
+/utlidar/robot_pose
+/utlidar/robot_pose -> TF - slightly different 

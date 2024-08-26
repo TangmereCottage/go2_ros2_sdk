@@ -40,12 +40,12 @@ def generate_launch_description():
     
     urdf_launch_nodes = []
 
-    joy_params = os.path.join(
+    joy_config = os.path.join(
         get_package_share_directory('go2_robot_sdk'),
         'config', 'joystick.yaml'
     )
 
-    default_config_topics = os.path.join(
+    mux_config = os.path.join(
         get_package_share_directory('go2_robot_sdk'),
         'config', 'twist_mux.yaml')
 
@@ -67,12 +67,19 @@ def generate_launch_description():
         'nav2_params.yaml'
     )
 
+    ekf_config = os.path.join(
+        get_package_share_directory('go2_robot_sdk'),
+        'config',
+        'ekf_params.yaml'
+    )
+
     urdf_file_name = 'go2.urdf'
     urdf = os.path.join(get_package_share_directory('go2_robot_sdk'),"urdf", urdf_file_name)
     with open(urdf, 'r') as infp:
         robot_desc = infp.read()
         print("robot_description\n", robot_desc)
 
+    # this listens to joint_states
     urdf_launch_nodes.append(
         Node(
             package='robot_state_publisher',
@@ -80,7 +87,7 @@ def generate_launch_description():
             name='robot_state_publisher',
             output='screen',
             parameters=[{
-                'use_sim_time': use_sim_time, 
+                'use_sim_time'     : use_sim_time, 
                 'robot_description': robot_desc
             }],
             arguments=[urdf]
@@ -98,10 +105,13 @@ def generate_launch_description():
             remappings=[('cloud_in', 'point_cloud2')],
             parameters=[{
                 'target_frame': 'base_link', 
-                'min_height': 0.05,
-                'max_height': 1.00,
-                'range_min':  0.0,
-                'range_max': 10.0,
+                #'angle_min'       : -1.04,
+                #'angle_max'       :  1.0,
+                'angle_increment' :  0.01,
+                'min_height'      :  0.10,
+                'max_height'      :  2.00,
+                'range_min'       :   0.5,
+                'range_max'       :  20.0,
             }],
             output='screen',
         ),
@@ -148,7 +158,7 @@ def generate_launch_description():
         Node(
             package='joy',
             executable='joy_node',
-            parameters=[joy_params]
+            parameters=[joy_config]
         ),
 
         # converts joy messages to velocity commands
@@ -160,7 +170,7 @@ def generate_launch_description():
             executable='teleop_node',
             name='teleop_node',
             remappings=[('cmd_vel', 'cmd_vel_joy')],
-            parameters=[default_config_topics],
+            parameters=[mux_config],
         ),
 
         # Take /cmd_vel_nav and /cmd_vel_joy, multiplex them, and send the result to 
@@ -171,19 +181,32 @@ def generate_launch_description():
             output='screen',
             parameters=[{
                 'use_sim_time': use_sim_time
-            }, default_config_topics],
+            }, mux_config],
         ),
 
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource([
-                os.path.join(get_package_share_directory(
-                    'slam_toolbox'), 'launch', 'online_async_launch.py')
-            ]),
-            launch_arguments={
-                'params_file' : slam_toolbox_config,
+
+        # Start robot localization using an Extended Kalman filter
+        Node(
+            package='robot_localization',
+            executable='ekf_node',
+            name='ekf_filter_node',
+            output='screen',
+            remappings=[('tf', 'tf_ekf')],
+            parameters=[{
                 'use_sim_time': use_sim_time,
-            }.items(),
+            }, ekf_config],
         ),
+
+        # IncludeLaunchDescription(
+        #     PythonLaunchDescriptionSource([
+        #         os.path.join(get_package_share_directory(
+        #             'slam_toolbox'), 'launch', 'online_async_launch.py')
+        #     ]),
+        #     launch_arguments={
+        #         'params_file' : slam_toolbox_config,
+        #         'use_sim_time': use_sim_time,
+        #     }.items(),
+        # ),
 
         # GroupAction(
         #     actions=[

@@ -3,41 +3,37 @@
 Stephen Brawner (brawner@gmail.com) 
      Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
      For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
-<robot name="go2">
+<robot name="Go2">
   
   <!-- map, odom, base_link, and base_footprint -->
-
   <link name="map"></link>
-  
   <joint name="map_joint" type="fixed">
-    <origin xyz="0 0 0" rpy="0 0 0" />
-    <parent link="map" />
-    <child link="odom" />
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="map"/>
+    <child link="odom"/>
   </joint>
   <link name="odom"></link>
-  
   <joint name="odom_joint" type="fixed">
-    <origin xyz="0 0 0" rpy="0 0 0" />
-    <parent link="odom" />
-    <child link="base_link" />
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="odom"/>
+    <child link="base_link"/>
   </joint>
   <link name="base_link">
     <inertial>
-      <origin xyz="0.021112 0 -0.005366" rpy="0 0 0" />
+      <origin xyz="0.021112 0 -0.005366" rpy="0 0 0"/>
       <mass value="6.921" />
-      <inertia ixx="0.02448" ixy="0.00012166" ixz="0.0014849" iyy="0.098077" iyz="-3.12E-05" izz="0.107" />
+      <inertia ixx="0.02448" ixy="0.00012166" ixz="0.0014849" iyy="0.098077" iyz="-3.12E-05" izz="0.107"/>
     </inertial>
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry><mesh filename="package://go2_robot_sdk/dae/base.dae" /></geometry>
-      <material name=""><color rgba="1 1 1 1" /></material>
+      <geometry><mesh filename="package://go2_robot_sdk/dae/base.dae"/></geometry>
+      <material name=""><color rgba="1 1 1 1"/></material>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0" />
-      <geometry><box size="0.3762 0.0935 0.114" /></geometry>
+      <geometry><box size="0.3762 0.0935 0.114"/></geometry>
     </collision>
   </link>
-  
   <joint name="base_footprint_joint" type="fixed">
     <parent link="base_link"/>
     <child link="base_footprint"/>
@@ -46,7 +42,6 @@ Stephen Brawner (brawner@gmail.com)
   <link name="base_footprint"></link>
   
   <!-- The Head --> 
-
   <joint name="Head_upper_joint" type="fixed" dont_collapse="true">
     <origin xyz="0.285 0 0.01" rpy="0 0 0" />
     <parent link="base_link" />
