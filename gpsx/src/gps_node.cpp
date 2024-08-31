@@ -89,7 +89,6 @@ struct messageVTG
 $GPGSV,M,N,S,SV,02,213,,03,-3,000,,11,00,121,,14,13,172,05*67
 $GPGSV,1,1,13,02,02,213,,03,-3,000,,11,00,121,,14,13,172,05*67
 
-
 1 M: Total number of messages of this type in this cycle
 2 N: Message number
 3 S: Total number of SVs in view
@@ -152,7 +151,7 @@ class GPSPublisher : public rclcpp::Node
       rcl_interfaces::msg::ParameterDescriptor comm_speed_descriptor;
       comm_speed_descriptor.description = "Serial interface speed setting in Baud";
       comm_speed_descriptor.integer_range.push_back(range);
-      this->declare_parameter("comm_speed", rclcpp::ParameterValue(9600), comm_speed_descriptor);
+      this->declare_parameter("comm_speed", rclcpp::ParameterValue(115200), comm_speed_descriptor);
       run();
     }
     ~GPSPublisher()
@@ -240,7 +239,6 @@ int GPSPublisher::openConnection(void)
     cfsetispeed(&tty, B57600);
   else if(serial_speed==115200)
     cfsetispeed(&tty, B115200);
-
   
   if (tcsetattr(fd, TCSANOW, &tty) != 0)
     RCLCPP_ERROR(this->get_logger(), "Error %d from tcsetattr: %s",errno,strerror(errno));
@@ -329,6 +327,15 @@ int GPSPublisher::preprocessMessage(std::string* message)
   return 0;
 }
 
+/*
+Example 1 (GPS only):
+$GPGLL,5109.0262317,N,11401.8407304,W,202725.00,A,D*79
+Example 2 (Multi-constellation):
+$GNGLL,5109.0262321,N,11401.8407167,W,174738.00,A,D*6B
+
+$GNRMC We do not parse these - minimum data
+*/
+
 // returns 0 on success <0 on error
 int GPSPublisher::readMessage(void)
 {
@@ -353,9 +360,11 @@ int GPSPublisher::readMessage(void)
     // $GP: GPS reciever
     // $GN: Combination of different satellite positioning systems
     // $GL: Glonass reciever
-    // $BD: Beidou reciever
+    // $GB/BD: BeiDou reciever
     // $GA: Galileo reciever
-    if(msgRead.compare(0,3,"$GP")!=0&&msgRead.compare(0,3,"$GN")!=0&&msgRead.compare(0,3,"$GL")&&msgRead.compare(0,3,"$BD")&&msgRead.compare(0,3,"$GA"))
+    if(  msgRead.compare(0,3,"$GP")!=0 && msgRead.compare(0,3,"$GN")!=0 \
+      && msgRead.compare(0,3,"$GL")    && msgRead.compare(0,3,"$BD") \
+      && msgRead.compare(0,3,"$GA")    && msgRead.compare(0,3,"$GB"))
     {
       RCLCPP_ERROR(this->get_logger(),"unknown start token of message: %s",msgRead.c_str());
     }
@@ -366,6 +375,9 @@ int GPSPublisher::readMessage(void)
     // Tokenizing with ',' 
     while(getline(check1, intermediate, ',')) 
       tokens.push_back(intermediate); 
+
+    //Example of the GGA message string is:
+    //$GPGGA,172814.0,3723.46587704,N,12202.26957864,W,2,6,1.2,18.893,M,-25.669,M,2.0 0031*4F 
 
     // is this one of the implemented messages?
     if(msgRead.compare(3,3,std::string("GGA"))==0)
@@ -425,7 +437,9 @@ int GPSPublisher::readMessage(void)
         }
       }
       //RCLCPP_INFO(this->get_logger(),"UTCtime: "+ UTCtime +" fix:" + std::to_string(fix) + " satellites: " + std::to_string(satellites) + " dilution: " + std::to_string(dilution) + " separation: "+ std::to_string(separation));
-      std::cout << "UTCtime: " << gga_.UTCtime << " fix:" << std::to_string(gga_.fix) << " satellites: " << std::to_string(gga_.satellites) << " dilution: " << std::to_string(gga_.dilution) << " separation: " << std::to_string(gga_.separation) << " latitude: " << std::to_string(gga_.latitude) << " longitude: " << std::to_string(gga_.longitude) << std::endl;
+      std::cout << "UTCtime: " << gga_.UTCtime << " fix:" << std::to_string(gga_.fix) << " satellites: " << std::to_string(gga_.satellites)\
+       << " dilution: " << std::to_string(gga_.dilution) << " separation: " << std::to_string(gga_.separation)\
+      << " latitude: "  << std::to_string(gga_.latitude) << " longitude: "  << std::to_string(gga_.longitude) << std::endl;
     }
     // else if(strncmp(readBuffer,"$GPVTG",6)==0)
     else if(msgRead.compare(3,3,std::string("VTG"))==0)
@@ -468,17 +482,20 @@ int GPSPublisher::readMessage(void)
           break;                              
         }
       }
-      std::cout << "true course: " << std::to_string(vtg_.true_course) << " magnetic:" << std::to_string(vtg_.true_course_magnetic) << " ground speed: " << std::to_string(vtg_.ground_speed) << std::endl;
+      std::cout << "True:" << std::to_string(vtg_.true_course) \
+      << " mag:"      << std::to_string(vtg_.true_course_magnetic)\
+      << " GS(km/h):" << std::to_string(vtg_.ground_speed) << std::endl;
     }
     // Satellites in view message, due to many satellites this is provided with multiple satellites (4 per line)
     else if(msgRead.compare(3,3,std::string("GSV"))==0)
     {
       //std::cout << "message read test test: " << msgRead << std::endl;
-      if(msgRead.compare(1,2,"GP")==0)
+      if(msgRead.compare(1,2,"GP")==0) // these are GPS satellites
+                                       // for example $GPGSV
       {
         // initialize storage to 0
         memset(&gsv_,0,sizeof(struct messageGSV));
-        // these are GPS satellites
+        
         for(unsigned int i=1;i<tokens.size();i++)
         {
           switch(i)
@@ -552,7 +569,11 @@ int GPSPublisher::readMessage(void)
             break;  
           }
         }
-        std::cout << "Number of GPS satellites: "<< gsv_.satInView << " Message number: " << gsv_.currCount << " ID sat 1 " << gsv_.sats[0].id << " ID sat 2 " << gsv_.sats[1].id << " ID sat 3 " << gsv_.sats[2].id << " ID sat 4 " << gsv_.sats[3].id << std::endl;
+        /*
+        std::cout << "Number of GPS satellites: " << gsv_.satInView << " Message number: " << gsv_.currCount \
+        << " ID sat 1 " << gsv_.sats[0].id << " ID sat 2 " << gsv_.sats[1].id << " ID sat 3 " << gsv_.sats[2].id \
+        << " ID sat 4 " << gsv_.sats[3].id << std::endl;
+        */
         int limit=0;
         // decide how many satellites are to be copied
         if(gsv_.currCount<gsv_.msgCount)
@@ -565,8 +586,8 @@ int GPSPublisher::readMessage(void)
       else if(msgRead.compare(1,2,"GL")==0)
       {
         // these are the Glonass satellites
+        // for example $GLGSV
         memset(&gsv_,0,sizeof(struct messageGSV));
-        // these are GPS satellites
         for(unsigned int i=1;i<tokens.size();i++)
         {
           switch(i)
@@ -637,6 +658,11 @@ int GPSPublisher::readMessage(void)
             break;  
           }
         }
+        /* 
+        std::cout << "Number of Glonass satellites: "<< gsv_.satInView << " Message number: " \
+        << gsv_.currCount << " ID sat 1 " << gsv_.sats[0].id << " ID sat 2 " << gsv_.sats[1].id \
+        << " ID sat 3 " << gsv_.sats[2].id << " ID sat 4 " << gsv_.sats[3].id << std::endl; 
+        */
         int limit=0;
         // decide how many satellites are to be copied
         if(gsv_.currCount<gsv_.msgCount)
@@ -649,12 +675,19 @@ int GPSPublisher::readMessage(void)
       else if(msgRead.compare(1,2,"GA")==0)
       {
         // these are the Galileo satellites
-        std::cout << "message read GA: " << msgRead << std::endl;
+        // for example $GAGSV
+        //std::cout << "message read Galileo: " << msgRead << std::endl;
+      }
+      else if(msgRead.compare(1,2,"GB")==0)
+      {
+        // these are the BaiDou satellites
+        // for example $GBGSV
+        //std::cout << "message read BeiDou: " << msgRead << std::endl;
       }
     }
     else
     {
-      std::cout << "Unknown message: " << msgRead << std::endl;
+      //std::cout << "Unknown message: " << msgRead << std::endl;
     }
   }
   else
@@ -677,7 +710,6 @@ void GPSPublisher::timer_callback()
   }
   // read and interprete the messages recieved
   readMessage();
-
 
   if(newdata_)
   {

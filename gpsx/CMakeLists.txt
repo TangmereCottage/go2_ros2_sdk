@@ -28,7 +28,11 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
 add_executable(gps_node src/gps_node.cpp)
 ament_target_dependencies(gps_node rclcpp std_msgs sensor_msgs)
-rosidl_target_interfaces(gps_node ${PROJECT_NAME} "rosidl_typesupport_cpp")
+
+rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp")
+target_link_libraries(gps_node "${cpp_typesupport_target}") 
+
+# rosidl_target_interfaces(gps_node ${PROJECT_NAME} "rosidl_typesupport_cpp")
 
 target_include_directories(gps_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -39,7 +43,6 @@ install(TARGETS gps_node
   DESTINATION lib/${PROJECT_NAME}
   INCLUDES
   DESTINATION include)
-
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

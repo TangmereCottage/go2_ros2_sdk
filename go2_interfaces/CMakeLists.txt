@@ -12,7 +12,6 @@ find_package(rosidl_default_generators REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 
-
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Go2Cmd.msg"
   "msg/Go2State.msg"

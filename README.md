@@ -318,8 +318,138 @@ export ROBOT_IP=192.168.123.99
 ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.1, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 1.0}}"
 ```
 
-so we have three sort of different position/orientation extiamtes 
+## The setup and transforms 
 
-/utlidar/robot_odom
-/utlidar/robot_pose
-/utlidar/robot_pose -> TF - slightly different 
+### GPS
+
+```shell
+source install/setup.bash
+colcon build
+ros2 run gpsx gps_node
+ros2 topic echo gpsx 
+```
+```
+longitude: -122.11874700000001
+latitude: 37.40014516666667
+altitude: 29.1
+ground_speed: 0.04899999871850014
+satellites: 12
+mode_indicator: 1
+separation: -30.0
+true_course: .nan
+true_course_magnetic: .nan
+dilution: 0.7699999809265137
+utc_time: 191946
+```
+
+
+We three sort of different position/orientation estiamtes 
+
+
+### /odometry/filtered
+
+This is coming from the EKF, and that uses the imu and the /odom
+So really, this should duplicate the /odom
+
+### /utlidar/robot_odom AKA /odom
+
+header:
+  stamp:
+    sec: 1725132789
+    nanosec: 87844026
+  frame_id: odom
+child_frame_id: base_link
+pose:
+  pose:
+    position:
+      x: -0.030529789626598358
+      y: 1.1890190839767456
+      z: 0.30895406007766724
+    orientation:
+      x: -0.008451441302895546
+      y: 0.0017630413640290499
+      z: 0.37821388244628906
+      w: -0.9256780743598938
+  covariance:
+  - 0.0
+twist:
+  twist:
+    linear:
+      x: -0.008428853936493397
+      y: 0.0024671705905348063
+      z: -0.016539515927433968
+    angular:
+      x: -0.019174758344888687
+      y: -0.0074568502604961395
+      z: 0.0031957929022610188
+  covariance:
+  - 0.0
+
+### /utlidar/robot_pose AKA - this goes to the transform broadcaster and then results in TF
+
+header:
+  stamp:
+    sec: 1725132698
+    nanosec: 117847230
+  frame_id: odom
+pose:
+  position:
+    x: -0.0911208987236023
+    y: 1.0456092357635498
+    z: 0.30894628167152405
+  orientation:
+    x: -0.008235638029873371
+    y: 0.0011225291527807713
+    z: 0.295285701751709
+    w: -0.9553729295730591
+
+### /utlidar/imu
+
+header:
+  stamp:
+    sec: 1725132650
+    nanosec: 926952838
+  frame_id: utlidar_imu
+orientation:
+  x: -0.9149233102798462
+  y: -0.3784295916557312
+  z: -0.02151946909725666
+  w: 0.12598009407520294
+orientation_covariance:
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+angular_velocity:
+  x: -0.0027744758408516645
+  y: 0.014536685310304165
+  z: 0.006824033334851265
+angular_velocity_covariance:
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+linear_acceleration:
+  x: 1.7145205736160278
+  y: -1.8578453063964844
+  z: -9.176068305969238
+linear_acceleration_covariance:
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0

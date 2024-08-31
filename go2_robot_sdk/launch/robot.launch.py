@@ -67,17 +67,23 @@ def generate_launch_description():
         'nav2_params.yaml'
     )
 
-    ekf_config = os.path.join(
+    ekf_config_local = os.path.join(
         get_package_share_directory('go2_robot_sdk'),
         'config',
-        'ekf_params.yaml'
+        'ekf_params_local.yaml'
+    )
+
+    ekf_config_global = os.path.join(
+        get_package_share_directory('go2_robot_sdk'),
+        'config',
+        'ekf_params_global.yaml'
     )
 
     urdf_file_name = 'go2.urdf'
     urdf = os.path.join(get_package_share_directory('go2_robot_sdk'),"urdf", urdf_file_name)
     with open(urdf, 'r') as infp:
         robot_desc = infp.read()
-        print("robot_description\n", robot_desc)
+        # print("robot_description\n", robot_desc)
 
     # this listens to joint_states
     urdf_launch_nodes.append(
@@ -184,17 +190,41 @@ def generate_launch_description():
             }, mux_config],
         ),
 
+        # this produces /gpsx
+        # Start GPS
+        Node(
+            package='gpsx',
+            executable='gps_node',
+            #name='ekf_filter_node',
+            output='screen',
+            #remappings=[('tf', 'tf_ekf')],
+            #parameters=[{
+            #    'use_sim_time': use_sim_time,
+            #}, ekf_config],
+        ),
 
         # Start robot localization using an Extended Kalman filter
         Node(
             package='robot_localization',
             executable='ekf_node',
-            name='ekf_filter_node',
+            name='ekf_filter_node_local',
             output='screen',
-            remappings=[('tf', 'tf_ekf')],
+            remappings=[('tf', 'tf_ekf_local')],
             parameters=[{
                 'use_sim_time': use_sim_time,
-            }, ekf_config],
+            }, ekf_config_local],
+        ),
+
+        # Start robot localization using an Extended Kalman filter
+        Node(
+            package='robot_localization',
+            executable='ekf_node',
+            name='ekf_filter_node_world',
+            output='screen',
+            remappings=[('tf', 'tf_ekf_world')],
+            parameters=[{
+                'use_sim_time': use_sim_time,
+            }, ekf_config_world],
         ),
 
         # IncludeLaunchDescription(

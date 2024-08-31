@@ -1,11 +1,11 @@
 # Header
-float64 stamp         # timestamp
-string frame_id      # world frame id
+float64 stamp          # timestamp
+string frame_id        # world frame id
 
 # Map info
 float32 resolution     # The map resolution [m/cell]
-uint32 width  # Map width along x-axis [cells]
-uint32 height # Map height alonge y-axis [cells]
+uint32 width           # Map width along x-axis [cells]
+uint32 height          # Map height alonge y-axis [cells]
 float32[2] origin      # Map frame origin xy-position [m], the xyz-axis direction of map frame is aligned with the world frame
 
 # Map data, in x-major order, starting with [0,0], ending with [width, height]

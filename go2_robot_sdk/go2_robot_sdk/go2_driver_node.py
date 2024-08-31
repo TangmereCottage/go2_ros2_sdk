@@ -102,7 +102,9 @@ class RobotBaseNode(Node):
         self.imu_pub.append(self.create_publisher(Imu, 'imu', qos_profile))
 
         # Broadcast TF information
-        self.broadcaster = TransformBroadcaster(self, qos=qos_profile)
+        # this does all the TF, probably
+        # needs the profile and the pose data  
+        self.TF_broadcaster = TransformBroadcaster(self, qos=qos_profile)
 
         self.robot_cmd_vel = {}
         self.robot_odom = {}
@@ -197,7 +199,7 @@ class RobotBaseNode(Node):
         odom_trans.transform.rotation.y    = msg.pose.orientation.y
         odom_trans.transform.rotation.z    = msg.pose.orientation.z
         odom_trans.transform.rotation.w    = msg.pose.orientation.w
-        self.broadcaster.sendTransform(odom_trans)
+        self.TF_broadcaster.sendTransform(odom_trans)
 
     # joint states are angles and therefore do not have/need a frame_id 
     def publish_joint_state_cyclonedds(self, msg):
@@ -236,11 +238,6 @@ class RobotBaseNode(Node):
         self.imu_pub[0].publish(msg)
 
     def publish_odom_cyclonedds(self, msg):
-        # NOTE - we are listening to /utlidar/cloud_deskewed - that uses odom already
-        # msg.header = Header(frame_id="odom") 
-        # no need because /utlidar/cloud_deskewed directly uses odom
-        # msg.header.stamp = self.get_clock().now().to_msg()
-        # no need because the time should be good
         self.odometry_pub[0].publish(msg)
 
     def joy_cmd(self):
