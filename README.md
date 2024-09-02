@@ -353,6 +353,9 @@ So really, this should duplicate the /odom
 
 ### /utlidar/robot_odom AKA /odom
 
+this is the same as /pose, except that is also has twist data (linear and angular velocities)
+
+
 header:
   stamp:
     sec: 1725132789
@@ -372,7 +375,7 @@ pose:
       w: -0.9256780743598938
   covariance:
   - 0.0
-twist:
+twist:   // these are linear and angular velocities
   twist:
     linear:
       x: -0.008428853936493397
@@ -385,7 +388,7 @@ twist:
   covariance:
   - 0.0
 
-### /utlidar/robot_pose AKA - this goes to the transform broadcaster and then results in TF
+### /utlidar/robot_pose - this goes to the transform broadcaster and then results in TF
 
 header:
   stamp:
@@ -394,14 +397,14 @@ header:
   frame_id: odom
 pose:
   position:
-    x: -0.0911208987236023
-    y: 1.0456092357635498
-    z: 0.30894628167152405
+    x: -0.0911208987236023  // absolute postion in the x odom frame in m
+    y: 1.0456092357635498   //
+    z: 0.30894628167152405  // 
   orientation:
-    x: -0.008235638029873371
-    y: 0.0011225291527807713
-    z: 0.295285701751709
-    w: -0.9553729295730591
+    x: -0.008235638029873371 //
+    y: 0.0011225291527807713 // 
+    z: 0.295285701751709     // left/right in odom frame
+    w: -0.9553729295730591   // changes too
 
 ### /utlidar/imu
 
@@ -417,27 +420,11 @@ orientation:
   w: 0.12598009407520294
 orientation_covariance:
 - 0.0
-- 0.0
-- 0.0
-- 0.0
-- 0.0
-- 0.0
-- 0.0
-- 0.0
-- 0.0
 angular_velocity:
   x: -0.0027744758408516645
   y: 0.014536685310304165
   z: 0.006824033334851265
 angular_velocity_covariance:
-- 0.0
-- 0.0
-- 0.0
-- 0.0
-- 0.0
-- 0.0
-- 0.0
-- 0.0
 - 0.0
 linear_acceleration:
   x: 1.7145205736160278
@@ -445,11 +432,59 @@ linear_acceleration:
   z: -9.176068305969238
 linear_acceleration_covariance:
 - 0.0
-- 0.0
-- 0.0
-- 0.0
-- 0.0
-- 0.0
-- 0.0
-- 0.0
-- 0.0
+
+
+ros2 topic echo /lowstate
+
+imu_state:
+  quaternion:             // yaw pitch roll
+  - -0.9998785257339478
+  - -0.0007873051799833775
+  - 0.0032413762528449297
+  - 0.015227883122861385
+  gyroscope:
+  - 0.0074568502604961395  // rotations
+  - -0.012783171609044075
+  - -0.015978964045643806
+  accelerometer:           // linear acceleration
+  - -0.05746084079146385
+  - -0.05147533491253853
+  - 9.581595420837402
+  rpy:                     // roll pitch yaw
+  - 0.0016731732757762074
+  - -0.0064580319449305534
+  - -0.030462516471743584
+  temperature: 80
+
+
+
+header:
+  stamp:
+    sec: 1725213719
+    nanosec: 413800001
+  frame_id: utlidar_imu
+orientation:
+  x: -0.980896532535553
+  y: -0.1354389786720276
+  z: -0.05633513256907463
+  w: 0.1138082891702652
+
+imu_state:
+  quaternion:
+  - -0.9978463649749756
+  - -0.0005274121649563313
+  - 0.0032289731316268444
+  - 0.06551428139209747
+  gyroscope:
+  - 0.0
+  - 0.008522114716470242
+  - -0.021305285394191742
+  accelerometer:
+  - -0.12210428714752197
+  - -0.043095629662275314
+  - 9.586383819580078
+  rpy:
+  - 0.0014756706077605486
+  - -0.0063749756664037704
+  - -0.13112790882587433
+  temperature: 79

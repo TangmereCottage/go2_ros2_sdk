@@ -197,6 +197,7 @@ def generate_launch_description():
             executable='gps_node',
             #name='ekf_filter_node',
             output='screen',
+            remappings=[('gpsx', 'gpsx_raw')],
             #remappings=[('tf', 'tf_ekf')],
             #parameters=[{
             #    'use_sim_time': use_sim_time,
@@ -207,9 +208,9 @@ def generate_launch_description():
         Node(
             package='robot_localization',
             executable='ekf_node',
-            name='ekf_filter_node_local',
+            name='ekf_filter_node',
             output='screen',
-            remappings=[('tf', 'tf_ekf_local')],
+            remappings=[('tf', 'tf_ekf_local'),('/odometry/filtered', '/odometry/filtered_local')],
             parameters=[{
                 'use_sim_time': use_sim_time,
             }, ekf_config_local],
@@ -219,12 +220,12 @@ def generate_launch_description():
         Node(
             package='robot_localization',
             executable='ekf_node',
-            name='ekf_filter_node_world',
+            name='ekf_filter_node',
             output='screen',
-            remappings=[('tf', 'tf_ekf_world')],
+            remappings=[('tf', 'tf_ekf_global'),('/odometry/filtered', '/odometry/filtered_global')],
             parameters=[{
                 'use_sim_time': use_sim_time,
-            }, ekf_config_world],
+            }, ekf_config_global],
         ),
 
         # IncludeLaunchDescription(

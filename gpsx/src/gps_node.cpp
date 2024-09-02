@@ -189,7 +189,6 @@ void GPSPublisher::run(void)
   service_ = this->create_service<gpsx::srv::GetSatList>("get_sat_list",&listGps);
   timer_ = this->create_wall_timer(50ms, std::bind(&GPSPublisher::timer_callback, this));
 }
- 
 
 // returns 0 on success and negative number on error
 int GPSPublisher::openConnection(void)
@@ -725,8 +724,8 @@ void GPSPublisher::timer_callback()
       //std::cout << "Converting UTC: "<< UTCtime << std::endl;
       message.utc_time=std::strtod(gga_.UTCtime.c_str(),0);
     }
-    message.true_course_magnetic=vtg_.true_course_magnetic;
-    message.true_course=vtg_.true_course;
+    message.true_course_magnetic=270.0;//vtg_.true_course_magnetic;
+    message.true_course=260.0;         //vtg_.true_course;
     message.ground_speed=vtg_.ground_speed;
     //RCLCPP_INFO(this->get_logger(), "Publishing: long: '%f' lat: '%f' alt: '%f'", message.longitude, message.latitude, message.altitude);
     publisher_->publish(message);

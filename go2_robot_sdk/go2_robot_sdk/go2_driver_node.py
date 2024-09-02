@@ -39,17 +39,21 @@ import math
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
-
 from tf2_ros import TransformBroadcaster, TransformStamped
-from geometry_msgs.msg import Twist, TransformStamped, PoseStamped
 
-from unitree_go.msg import LowState
+from tf_transformations import euler_from_quaternion
+#from transforms3d import euler_from_quaternion
+
+from geometry_msgs.msg import Twist, TransformStamped, PoseStamped, Quaternion, Vector3
 
 from sensor_msgs.msg import PointCloud2, PointField, JointState, Joy, Imu
 from sensor_msgs_py import point_cloud2
 from std_msgs.msg import Header
 from nav_msgs.msg import Odometry
 
+#from go2_interfaces.msg import Go2State, IMU
+
+from unitree_go.msg import LowState
 from unitree_sdk2py.core.channel import ChannelSubscriber, ChannelFactoryInitialize
 from unitree_sdk2py.idl.default import unitree_go_msg_dds__SportModeState_
 from unitree_sdk2py.idl.unitree_go.msg.dds_ import SportModeState_
@@ -80,7 +84,7 @@ class RobotBaseNode(Node):
         self.t = 0
         self.dt = 0.01
 
-        # Initial poition and yaw
+        # Initial position and yaw
         self.px0 = 0
         self.py0 = 0
         self.yaw0 = 0
@@ -127,7 +131,7 @@ class RobotBaseNode(Node):
         self.create_subscription(
             LowState,
             'lowstate',
-            self.publish_joint_state_cyclonedds,
+            self.publish_joint_state_imu_cyclonedds,
             qos_profile)
 
         # frame_id: odom
@@ -139,7 +143,6 @@ class RobotBaseNode(Node):
             qos_profile)
 
         # frame_id: odom
-        # odom
         # straight passthrough 
         self.create_subscription(
             Odometry,
@@ -147,14 +150,9 @@ class RobotBaseNode(Node):
             self.publish_odom_cyclonedds,
             qos_profile)
 
-        self.create_subscription(
-            Imu,
-            '/utlidar/imu',
-            self.publish_imu_cyclonedds,
-            qos_profile)
-
         # subscribe to the raw LIDAR data
         # frame_id: odom already
+        # but we do not know how good that is?
         self.create_subscription(
             PointCloud2,
             '/utlidar/cloud_deskewed',
@@ -185,7 +183,7 @@ class RobotBaseNode(Node):
             time.sleep(0.1)
             self.client.StopMove()
 
-    # this is body pose - and this is being sent to TF
+    # this is body pose and is being sent to TF
     # coming from '/utlidar/robot_pose'
     def publish_body_poss_cyclonedds(self, msg):
         odom_trans = TransformStamped()
@@ -202,7 +200,7 @@ class RobotBaseNode(Node):
         self.TF_broadcaster.sendTransform(odom_trans)
 
     # joint states are angles and therefore do not have/need a frame_id 
-    def publish_joint_state_cyclonedds(self, msg):
+    def publish_joint_state_imu_cyclonedds(self, msg):
         joint_state = JointState()
         joint_state.header.stamp = self.get_clock().now().to_msg()
         joint_state.name = [
@@ -217,8 +215,48 @@ class RobotBaseNode(Node):
             msg.motor_state[9].q, msg.motor_state[10].q, msg.motor_state[11].q,
             msg.motor_state[6].q, msg.motor_state[ 7].q, msg.motor_state[ 8].q,
         ]
-        # self.get_logger().info(f"Joint state FL_hip: {msg.motor_state[3].q}")
         self.joint_pub[0].publish(joint_state)
+
+        imu_msg = Imu()
+        imu_msg.header.stamp = self.get_clock().now().to_msg()
+        imu_msg.header.frame_id = 'IMU'
+        
+        gyro = Vector3()
+        gyro.x = float(msg.imu_state.gyroscope[0])
+        gyro.y = float(msg.imu_state.gyroscope[1])
+        gyro.z = float(msg.imu_state.gyroscope[2])
+        imu_msg.angular_velocity = gyro
+        imu_msg.angular_velocity_covariance[0] = 0.00001
+        imu_msg.angular_velocity_covariance[4] = 0.00001
+        imu_msg.angular_velocity_covariance[8] = 0.00001
+
+        accel = Vector3()
+        accel.x = float(msg.imu_state.accelerometer[0])
+        accel.y = float(msg.imu_state.accelerometer[1])
+        accel.z = float(msg.imu_state.accelerometer[2])
+        imu_msg.linear_acceleration = accel
+        imu_msg.linear_acceleration_covariance[0] = 0.00001
+        imu_msg.linear_acceleration_covariance[4] = 0.00001
+        imu_msg.linear_acceleration_covariance[8] = 0.00001
+
+        quat_w, quat_x, quat_y, quat_z = msg.imu_state.quaternion
+        imu_msg.orientation.x = float(quat_x)
+        imu_msg.orientation.y = float(quat_y)
+        imu_msg.orientation.z = float(quat_z)
+        imu_msg.orientation.w = float(quat_w)
+        imu_msg.orientation_covariance[0] = 0.00001
+        imu_msg.orientation_covariance[4] = 0.00001
+        imu_msg.orientation_covariance[8] = 0.00001
+
+        orientation_list = [float(quat_x), float(quat_y), float(quat_z), float(quat_w)]
+        (roll, pitch, yaw) = euler_from_quaternion(orientation_list)
+        #self.get_logger().info(f"Roll:{roll} Pitch:{pitch} Yaw:{yaw}")
+
+        # imu.accelerometer = msg.imu_state.accelerometer
+        # imu.gyroscope = msg.imu_state.gyroscope
+        # imu.rpy = msg.imu_state.rpy
+        # imu.temperature = msg.imu_state.temperature
+        self.imu_pub[0].publish(imu_msg)
 
     def publish_lidar_cyclonedds(self, msg):
         # NOTE - we are listening to /utlidar/cloud_deskewed - that uses odom already
@@ -228,14 +266,16 @@ class RobotBaseNode(Node):
         # no need because the time should be good
         self.lidar_pub[0].publish(msg)
 
-    def publish_imu_cyclonedds(self, msg):
-        # NOTE - we are listening to /utlidar/cloud_deskewed - that uses odom already
-        # 'sensor_msgs/msg/Imu'
-        # msg.header = Header(frame_id="odom") 
-        # no need because /utlidar/cloud_deskewed directly uses odom
-        # msg.header.stamp = self.get_clock().now().to_msg()
-        # no need because the time should be good
-        self.imu_pub[0].publish(msg)
+    # def publish_imu_cyclonedds(self, msg):
+    #     # need to create imu message
+
+    #     # NOTE - we are listening to /utlidar/cloud_deskewed - that uses odom already
+    #     # 'sensor_msgs/msg/Imu'
+    #     # msg.header = Header(frame_id="odom") 
+    #     # no need because /utlidar/cloud_deskewed directly uses odom
+    #     # msg.header.stamp = self.get_clock().now().to_msg()
+    #     # no need because the time should be good
+    #     self.imu_pub[0].publish(msg)
 
     def publish_odom_cyclonedds(self, msg):
         self.odometry_pub[0].publish(msg)
@@ -253,7 +293,7 @@ class RobotBaseNode(Node):
             self.get_logger().info("Stand up")
             self.client.StandUp()
             time.sleep(0.3)        
-            self.client.Euler(0.1, 0.2, 0.3)  # roll, pitch, yaw
+            self.client.Euler(0.0, 0.0, 0.2)  # roll, pitch, yaw
             time.sleep(0.3)  
             self.client.BalanceStand()
 

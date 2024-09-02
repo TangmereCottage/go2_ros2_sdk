@@ -341,7 +341,7 @@ Stephen Brawner (brawner@gmail.com)
 
   <link name="RR_foot">
     <inertial><origin xyz="0 0 0" rpy="0 0 0" /><mass value="0.04" /><inertia ixx="9.6e-06" ixy="0" ixz="0" iyy="9.6e-06" iyz="0" izz="9.6e-06" /></inertial>
-    <visual><origin xyz="0 0 0" rpy="0 0 0" /><geometry><mesh   filename="package://go2_robot_sdk/dae/foot.dae" /></geometry><material name=""><color   rgba="1 1 1 1" /></material></visual>
+    <visual><origin xyz="0 0 0" rpy="0 0 0" /><geometry><mesh filename="package://go2_robot_sdk/dae/foot.dae" /></geometry><material name=""><color rgba="1 1 1 1" /></material></visual>
     <collision><origin rpy="0 0 0" xyz="-0.002 0 0" /><geometry><sphere radius="0.022" /></geometry></collision>
   </link>
   <joint name="RR_foot_joint" type="fixed" dont_collapse="true">
@@ -351,14 +351,25 @@ Stephen Brawner (brawner@gmail.com)
     <axis xyz="0 0 0" />
   </joint>
   
-  <joint name="imu_joint" type="fixed">
+  <joint name="IMU_joint" type="fixed">
     <origin xyz="-0.02557 0 0.04232" rpy="0 0 0" />
     <parent link="base_link" />
-    <child link="imu" />
+    <child link="IMU" />
     <axis xyz="0 0 0" />
   </joint>
-  <link name="imu">
+  <link name="IMU">
     <inertial><origin xyz="0 0 0" rpy="0 0 0" /><mass value="0" /><inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0" /></inertial>
+  </link>
+
+  <joint name="GPS_joint" type="fixed">
+    <origin xyz="0.22 0 0.12" rpy="0 0 0" />
+    <parent link="base_link" />
+    <child link="GPS" />
+    <axis xyz="0 0 0" />
+  </joint>
+  <link name="GPS">
+    <inertial><origin xyz="0 0 0" rpy="0 0 0" /><mass value="0" /><inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0" /></inertial>
+    <visual><geometry><cylinder length="0.03" radius="0.03"/></geometry><material name="blue"><color rgba="0 0 .8 1"/></material></visual>
   </link>
 
   <joint name="LIDAR_joint" type="fixed">
