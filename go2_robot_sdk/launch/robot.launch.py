@@ -120,7 +120,7 @@ def generate_launch_description():
             package='pointcloud_to_laserscan',
             executable='pointcloud_to_laserscan_node',
             name='pointcloud_to_laserscan',
-            remappings=[('cloud_in', 'point_cloud2')],
+            remappings=[('cloud_in', '/bits/point_cloud2'),('scan', '/bits/scan')],
             parameters=[{
                 'target_frame': 'base_link', 
                 #'angle_min'       : -1.04,
@@ -211,7 +211,6 @@ def generate_launch_description():
         Node(
             package='gpsx',
             executable='gps_node',
-            #name='ekf_filter_node',
             output='screen',
             #remappings=[('gpsx', 'gpsx_raw')],
             #remappings=[('tf', 'tf_ekf')],
@@ -226,7 +225,7 @@ def generate_launch_description():
             executable='ekf_node',
             name='ekf_filter_node',
             output='screen',
-            remappings=[('tf', 'tf_ekf_internal'),('/odometry/filtered', '/odometry/filtered_internal')],
+            remappings=[('tf', '/bits/tf_ekf_internal'),('/odometry/filtered', '/bits/odometry/filtered_internal')],
             parameters=[{
                 'use_sim_time': use_sim_time,
             }, ekf_config_internal],
@@ -237,7 +236,7 @@ def generate_launch_description():
             executable='ekf_node',
             name='ekf_filter_node',
             output='screen',
-            remappings=[('tf', 'tf_ekf_wit'),('/odometry/filtered', '/odometry/filtered_wit')],
+            remappings=[('tf', '/bits/tf_ekf_wit'),('/odometry/filtered', '/bits/odometry/filtered_wit')],
             parameters=[{
                 'use_sim_time': use_sim_time,
             }, ekf_config_wit],
@@ -249,7 +248,7 @@ def generate_launch_description():
             executable='ekf_node',
             name='ekf_filter_node',
             output='screen',
-            remappings=[('tf', 'tf_ekf_global'),('/odometry/filtered', '/odometry/filtered_global')],
+            remappings=[('tf', '/bits/tf_ekf_global'),('/odometry/filtered', '/bits/odometry/filtered_global')],
             parameters=[{
                 'use_sim_time': use_sim_time,
             }, ekf_config_global],
@@ -263,11 +262,11 @@ def generate_launch_description():
                 'use_sim_time': use_sim_time,
             }, ekf_config_gps],
             remappings=[
-                ("imu/data", "/wit/imu"),
-                ("gps/fix", "gpsx"),
-                ("odometry/filtered", "/utlidar/robot_odom"),
-                ("gps/filtered", "gps/filtered"),
-                ("odometry/gps", "odometry/gps")],
+                ("imu/data", "/bits/imu_wit"),
+                ("gps/fix", "/bits/gps"),
+                ("odometry/filtered", "/bits/odom_int"),
+                ("gps/filtered", "/bits/gps/filtered"),  #output
+                ("odometry/gps", "/bits/odometry/gps")], #output
         ),
 
 # Subscribed Topics
@@ -275,19 +274,20 @@ def generate_launch_description():
 #     odometry/filtered A nav_msgs/Odometry message of your robot’s current position. This is needed in the event that your first GPS reading comes after your robot has attained some non-zero pose.
 #     gps/fix A sensor_msgs/NavSatFix message containing your robot’s GPS coordinates
 # Published Topics
-#     odometry/gps A nav_msgs/Odometry message containing the GPS coordinates of your robot, transformed into its world coordinate frame. This message can be directly fused into robot_localization’s state estimation nodes.
+#     odometry/gps A nav_msgs/Odometry message containing the GPS coordinates of your robot, transformed 
+#         into its world coordinate frame. This message can be directly fused into robot_localization’s state estimation nodes.
 #     gps/filtered (optional) A sensor_msgs/NavSatFix message containing your robot’s world frame position, transformed into GPS coordinates
 
-        # IncludeLaunchDescription(
-        #     PythonLaunchDescriptionSource([
-        #         os.path.join(get_package_share_directory(
-        #             'slam_toolbox'), 'launch', 'online_async_launch.py')
-        #     ]),
-        #     launch_arguments={
-        #         'params_file' : slam_toolbox_config,
-        #         'use_sim_time': use_sim_time,
-        #     }.items(),
-        # ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource([
+                os.path.join(get_package_share_directory(
+                    'slam_toolbox'), 'launch', 'online_async_launch.py')
+            ]),
+            launch_arguments={
+                'params_file' : slam_toolbox_config,
+                'use_sim_time': use_sim_time,
+            }.items(),
+        ),
 
         # GroupAction(
         #     actions=[

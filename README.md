@@ -1,3 +1,46 @@
+
+```shell
+ros2 topic echo /bits/odometry/gps
+
+header:
+  stamp:
+    sec: 1725571868
+    nanosec: 37879040
+  frame_id: odom
+child_frame_id: ''
+pose:
+  pose:
+    position:
+      x: -1.2766470423274532
+      y: 5.24541326190924
+      z: 0.0
+...
+```
+
+```shell
+ros2 topic echo /bits/gps/filtered
+
+Absolute coordiantes
+
+header:
+  stamp:
+    sec: 1725571982
+    nanosec: 221003160
+  frame_id: base_link
+status:
+  status: 2
+  service: 0
+latitude: 1.234567892
+longitude: 12.3456789
+altitude: 23.477809265276257
+position_covariance:
+- 0.0
+```
+
+
+
+
+
 ![Ros2 SDK](https://github.com/abizovnuralem/go2_ros2_sdk/assets/33475993/49edebbe-11b6-49c6-b82d-bc46257674bd)
 
 # Welcome to the Unitree Go2 ROS2 SDK Project!

@@ -95,9 +95,9 @@ class RobotBaseNode(Node):
 
         self.joint_pub.append(self.create_publisher(JointState, 'joint_states', qos_profile))
         #self.go2_state_pub.append(self.create_publisher(Go2State, f'SDK/robot0/go2_states', qos_profile))
-        self.lidar_pub.append(self.create_publisher(PointCloud2, 'point_cloud2', qos_profile))
-        self.odometry_pub.append(self.create_publisher(Odometry, 'odom', qos_profile))
-        self.imu_pub.append(self.create_publisher(Imu, 'imu', qos_profile))
+        self.lidar_pub.append(self.create_publisher(PointCloud2, '/bits/point_cloud2', qos_profile))
+        self.odometry_pub.append(self.create_publisher(Odometry, '/bits/odom_int', qos_profile))
+        self.imu_pub.append(self.create_publisher(Imu,           '/bits/imu_int', qos_profile))
 
         # Broadcast TF information
         # this does all the TF, probably
@@ -150,7 +150,6 @@ class RobotBaseNode(Node):
         self.create_subscription(
             PointCloud2,
             '/utlidar/cloud_deskewed',
-            #'/utlidar/cloud',
             self.publish_lidar_cyclonedds,
             qos_profile)
 
@@ -262,17 +261,6 @@ class RobotBaseNode(Node):
         # msg.header.stamp = self.get_clock().now().to_msg()
         # no need because the time should be good
         self.lidar_pub[0].publish(msg)
-
-    # def publish_imu_cyclonedds(self, msg):
-    #     # need to create imu message
-
-    #     # NOTE - we are listening to /utlidar/cloud_deskewed - that uses odom already
-    #     # 'sensor_msgs/msg/Imu'
-    #     # msg.header = Header(frame_id="odom") 
-    #     # no need because /utlidar/cloud_deskewed directly uses odom
-    #     # msg.header.stamp = self.get_clock().now().to_msg()
-    #     # no need because the time should be good
-    #     self.imu_pub[0].publish(msg)
 
     def publish_odom_cyclonedds(self, msg):
         self.odometry_pub[0].publish(msg)

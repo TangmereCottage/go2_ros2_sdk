@@ -120,8 +120,8 @@ class ImuMagNode(Node):
 
         qos_profile = QoSProfile(depth=10)
 
-        self.publisher_imu = self.create_publisher(Imu, 'wit/imu', qos_profile)
-        self.publisher_mag = self.create_publisher(MagneticField, 'wit/mag', qos_profile)
+        self.publisher_imu = self.create_publisher(Imu, '/bits/imu_wit', qos_profile)
+        self.publisher_mag = self.create_publisher(MagneticField, '/bits/mag_wit', qos_profile)
           
         # Check the sensor
         timer_period = 0.02
@@ -244,7 +244,7 @@ class ImuMagNode(Node):
             AngY = self.getSignInt32(self.TempBytes[27] << 24 | self.TempBytes[28] << 16 | self.TempBytes[25] << 8 | self.TempBytes[26]) / 1000
             AngZ = self.getSignInt32(self.TempBytes[31] << 24 | self.TempBytes[32] << 16 | self.TempBytes[29] << 8 | self.TempBytes[30]) / 1000
 
-            self.get_logger().info(f"WitMotion (DEG) Roll:{AngX} Pitch:{AngY} Yaw:{AngZ}")
+            # self.get_logger().info(f"WitMotion (DEG) Roll:{AngX} Pitch:{AngY} Yaw:{AngZ}")
 
             # convert to radians
             angle_radian = [AngX * math.pi / 180, AngY * math.pi / 180, AngZ * math.pi / 180]
