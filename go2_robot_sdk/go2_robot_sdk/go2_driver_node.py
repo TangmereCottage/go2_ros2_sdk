@@ -244,12 +244,15 @@ class RobotBaseNode(Node):
 
         orientation_list = [float(quat_x), float(quat_y), float(quat_z), float(quat_w)]
         (roll, pitch, yaw) = euler_from_quaternion(orientation_list)
-        #self.get_logger().info(f"Roll:{roll} Pitch:{pitch} Yaw:{yaw}")
+        # self.get_logger().info(f"Internal (RAD) Roll:{roll} Pitch:{pitch} Yaw:{yaw}")
 
-        # imu.accelerometer = msg.imu_state.accelerometer
-        # imu.gyroscope = msg.imu_state.gyroscope
-        # imu.rpy = msg.imu_state.rpy
-        # imu.temperature = msg.imu_state.temperature
+        # these are the same thing!
+        rolli  = msg.imu_state.rpy[0]
+        pitchi = msg.imu_state.rpy[1]
+        yawi   = msg.imu_state.rpy[2]
+        # self.get_logger().info(f"InternalQ (DEG) Roll:{roll*57.2958} Pitch:{pitch*57.2958} Yaw:{yaw*57.2958}")
+        # self.get_logger().info(f"InternalD (DEG) Roll:{rolli*57.2958} Pitch:{pitchi*57.2958} Yaw:{yawi*57.2958}")
+
         self.imu_pub[0].publish(imu_msg)
 
     def publish_lidar_cyclonedds(self, msg):

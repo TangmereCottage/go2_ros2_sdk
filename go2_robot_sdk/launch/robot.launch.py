@@ -67,16 +67,28 @@ def generate_launch_description():
         'nav2_params.yaml'
     )
 
-    ekf_config_local = os.path.join(
+    ekf_config_internal = os.path.join(
         get_package_share_directory('go2_robot_sdk'),
         'config',
-        'ekf_params_local.yaml'
+        'ekf_params_internal.yaml'
+    )
+
+    ekf_config_wit = os.path.join(
+        get_package_share_directory('go2_robot_sdk'),
+        'config',
+        'ekf_params_wit.yaml'
     )
 
     ekf_config_global = os.path.join(
         get_package_share_directory('go2_robot_sdk'),
         'config',
         'ekf_params_global.yaml'
+    )
+
+    ekf_config_gps = os.path.join(
+        get_package_share_directory('go2_robot_sdk'),
+        'config',
+        'ekf_params_gps.yaml'
     )
 
     urdf_file_name = 'go2.urdf'
@@ -208,29 +220,63 @@ def generate_launch_description():
             #}, ekf_config],
         ),
 
-        # # Start robot localization using an Extended Kalman filter
-        # Node(
-        #     package='robot_localization',
-        #     executable='ekf_node',
-        #     name='ekf_filter_node',
-        #     output='screen',
-        #     remappings=[('tf', 'tf_ekf_local'),('/odometry/filtered', '/odometry/filtered_local')],
-        #     parameters=[{
-        #         'use_sim_time': use_sim_time,
-        #     }, ekf_config_local],
-        # ),
+        # Start robot localization using an Extended Kalman filter
+        Node(
+            package='robot_localization',
+            executable='ekf_node',
+            name='ekf_filter_node',
+            output='screen',
+            remappings=[('tf', 'tf_ekf_internal'),('/odometry/filtered', '/odometry/filtered_internal')],
+            parameters=[{
+                'use_sim_time': use_sim_time,
+            }, ekf_config_internal],
+        ),
 
-        # # Start robot localization using an Extended Kalman filter
-        # Node(
-        #     package='robot_localization',
-        #     executable='ekf_node',
-        #     name='ekf_filter_node',
-        #     output='screen',
-        #     remappings=[('tf', 'tf_ekf_global'),('/odometry/filtered', '/odometry/filtered_global')],
-        #     parameters=[{
-        #         'use_sim_time': use_sim_time,
-        #     }, ekf_config_global],
-        # ),
+        Node(
+            package='robot_localization',
+            executable='ekf_node',
+            name='ekf_filter_node',
+            output='screen',
+            remappings=[('tf', 'tf_ekf_wit'),('/odometry/filtered', '/odometry/filtered_wit')],
+            parameters=[{
+                'use_sim_time': use_sim_time,
+            }, ekf_config_wit],
+        ),
+
+        # Start robot localization using an Extended Kalman filter
+        Node(
+            package='robot_localization',
+            executable='ekf_node',
+            name='ekf_filter_node',
+            output='screen',
+            remappings=[('tf', 'tf_ekf_global'),('/odometry/filtered', '/odometry/filtered_global')],
+            parameters=[{
+                'use_sim_time': use_sim_time,
+            }, ekf_config_global],
+        ),
+        Node(
+            package="robot_localization",
+            executable="navsat_transform_node",
+            name="navsat_transform",
+            output="screen",
+            parameters=[{
+                'use_sim_time': use_sim_time,
+            }, ekf_config_gps],
+            remappings=[
+                ("imu/data", "/wit/imu"),
+                ("gps/fix", "gpsx"),
+                ("odometry/filtered", "/utlidar/robot_odom"),
+                ("gps/filtered", "gps/filtered"),
+                ("odometry/gps", "odometry/gps")],
+        ),
+
+# Subscribed Topics
+#     imu/data A sensor_msgs/Imu message with orientation data
+#     odometry/filtered A nav_msgs/Odometry message of your robot’s current position. This is needed in the event that your first GPS reading comes after your robot has attained some non-zero pose.
+#     gps/fix A sensor_msgs/NavSatFix message containing your robot’s GPS coordinates
+# Published Topics
+#     odometry/gps A nav_msgs/Odometry message containing the GPS coordinates of your robot, transformed into its world coordinate frame. This message can be directly fused into robot_localization’s state estimation nodes.
+#     gps/filtered (optional) A sensor_msgs/NavSatFix message containing your robot’s world frame position, transformed into GPS coordinates
 
         # IncludeLaunchDescription(
         #     PythonLaunchDescriptionSource([

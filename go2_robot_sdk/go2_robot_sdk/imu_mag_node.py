@@ -35,10 +35,7 @@ logging.basicConfig(level=logging.WARN)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-class ImuPublisher(Node):
-    """
-    Create an ImuPublisher class, which is a subclass of the Node class.
-    """
+class ImuMagNode(Node):
 
     # modbus ID
     ADDR = 0x50
@@ -88,15 +85,15 @@ class ImuPublisher(Node):
 
     def __init__(self):
 
-        super().__init__('wit_hcan_imu_mag')
+        super().__init__('imu_mag_node')
         
         self.declare_parameter('wit_imu_port', '/dev/ttyUSB0')
         self.wit_imu_port = self.get_parameter('wit_imu_port').get_parameter_value().string_value
-        self.get_logger().info(f"Received WitMotion port: {self.wit_imu_port}")
+        self.get_logger().info(f"WitMotion port: {self.wit_imu_port}")
 
-        self.declare_parameter('wit_imu_baud', 9600)
+        self.declare_parameter('wit_imu_baud', 115200)
         self.wit_imu_baud = self.get_parameter('wit_imu_baud').get_parameter_value().integer_value
-        self.get_logger().info(f"Received WitMotion baud: {self.wit_imu_baud}")
+        self.get_logger().info(f"WitMotion baud: {self.wit_imu_baud}")
     
         self.iapflag=0
 
@@ -126,8 +123,8 @@ class ImuPublisher(Node):
         self.publisher_imu = self.create_publisher(Imu, 'wit/imu', qos_profile)
         self.publisher_mag = self.create_publisher(MagneticField, 'wit/mag', qos_profile)
           
-        # Publish a message every 0.05 seconds
-        timer_period = 0.50
+        # Check the sensor
+        timer_period = 0.02
           
         # Create the timer
         self.timer = self.create_timer(timer_period, self.timer_callback)
@@ -216,12 +213,20 @@ class ImuPublisher(Node):
             self.imu_msg.linear_acceleration.y = AccY
             self.imu_msg.linear_acceleration.z = AccZ
 
-            AsX = self.getSignInt16(self.TempBytes[9] << 8 | self.TempBytes[10]) / 32768 * 2000
+            AsX = self.getSignInt16(self.TempBytes[ 9] << 8 | self.TempBytes[10]) / 32768 * 2000
             AsY = self.getSignInt16(self.TempBytes[11] << 8 | self.TempBytes[12]) / 32768 * 2000
             AsZ = self.getSignInt16(self.TempBytes[13] << 8 | self.TempBytes[14]) / 32768 * 2000
             self.imu_msg.angular_velocity.x = AsX
             self.imu_msg.angular_velocity.y = AsY
             self.imu_msg.angular_velocity.z = AsZ
+
+            # what are the units? These might be in Gauss?
+            # looks like milliT 
+            # The magnetometer supports mT(millit), Gs(Gauss), 1mT=10Gs, measuring range from 0-2500mT(25000Gs)
+            # x: -22.425
+            # y: -11.765
+            # z: -46.982
+            # does not actually matter, probably, as long as the offsets are in the same units 
 
             HX = self.getSignInt16(self.TempBytes[15] << 8 | self.TempBytes[16]) * 13 / 1000
             HY = self.getSignInt16(self.TempBytes[17] << 8 | self.TempBytes[18]) * 13 / 1000
@@ -229,11 +234,19 @@ class ImuPublisher(Node):
             self.mag_msg.magnetic_field.x = HX
             self.mag_msg.magnetic_field.y = HY
             self.mag_msg.magnetic_field.z = HZ
+            # values from hard iron calibration
+            # spin robot left and right in both directions and determine the 
+            # center of the resulting x,y circle when the data are plotted - that's the offet to subtract
 
+            # this is already in an absolute frame?
+            # Yes, this is with magnetometer data in it
             AngX = self.getSignInt32(self.TempBytes[23] << 24 | self.TempBytes[24] << 16 | self.TempBytes[21] << 8 | self.TempBytes[22]) / 1000
             AngY = self.getSignInt32(self.TempBytes[27] << 24 | self.TempBytes[28] << 16 | self.TempBytes[25] << 8 | self.TempBytes[26]) / 1000
             AngZ = self.getSignInt32(self.TempBytes[31] << 24 | self.TempBytes[32] << 16 | self.TempBytes[29] << 8 | self.TempBytes[30]) / 1000
 
+            self.get_logger().info(f"WitMotion (DEG) Roll:{AngX} Pitch:{AngY} Yaw:{AngZ}")
+
+            # convert to radians
             angle_radian = [AngX * math.pi / 180, AngY * math.pi / 180, AngZ * math.pi / 180]
             qua = quaternion_from_euler(angle_radian[0], angle_radian[1], angle_radian[2])
 
@@ -260,11 +273,9 @@ class ImuPublisher(Node):
         return num
 
     def timer_callback(self):
-
         self.readReg(0x34, 15)
-        time.sleep(0.1)
+        time.sleep(0.01)
         #print("Sending data request 0x34")
-
         try:
             buff_count = self.wt_imu.inWaiting()
             #self.get_logger().info(f"Waiting {buff_count}")
@@ -286,13 +297,13 @@ def main(args=None):
     rclpy.init(args=args)
 
     # Create the node
-    wit_hcan_imu_mag = ImuPublisher()
+    imu_mag_node = ImuMagNode()
   
     # Spin the node so the callback function is called.
-    rclpy.spin(wit_hcan_imu_mag)
+    rclpy.spin(imu_mag_node)
   
     # Destroy the node explicitly
-    wit_hcan_imu_mag.destroy_node()
+    imu_mag_node.destroy_node()
     
     # Shutdown the ROS client library for Python
     rclpy.shutdown()
