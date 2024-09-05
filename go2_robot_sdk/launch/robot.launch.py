@@ -151,6 +151,10 @@ def generate_launch_description():
             }],
         ),
         Node(
+            package='go2_robot_sdk',
+            executable='imu_mag_node',
+        ),
+        Node(
             package='rviz2',
             namespace='',
             executable='rviz2',
@@ -197,36 +201,36 @@ def generate_launch_description():
             executable='gps_node',
             #name='ekf_filter_node',
             output='screen',
-            remappings=[('gpsx', 'gpsx_raw')],
+            #remappings=[('gpsx', 'gpsx_raw')],
             #remappings=[('tf', 'tf_ekf')],
             #parameters=[{
             #    'use_sim_time': use_sim_time,
             #}, ekf_config],
         ),
 
-        # Start robot localization using an Extended Kalman filter
-        Node(
-            package='robot_localization',
-            executable='ekf_node',
-            name='ekf_filter_node',
-            output='screen',
-            remappings=[('tf', 'tf_ekf_local'),('/odometry/filtered', '/odometry/filtered_local')],
-            parameters=[{
-                'use_sim_time': use_sim_time,
-            }, ekf_config_local],
-        ),
+        # # Start robot localization using an Extended Kalman filter
+        # Node(
+        #     package='robot_localization',
+        #     executable='ekf_node',
+        #     name='ekf_filter_node',
+        #     output='screen',
+        #     remappings=[('tf', 'tf_ekf_local'),('/odometry/filtered', '/odometry/filtered_local')],
+        #     parameters=[{
+        #         'use_sim_time': use_sim_time,
+        #     }, ekf_config_local],
+        # ),
 
-        # Start robot localization using an Extended Kalman filter
-        Node(
-            package='robot_localization',
-            executable='ekf_node',
-            name='ekf_filter_node',
-            output='screen',
-            remappings=[('tf', 'tf_ekf_global'),('/odometry/filtered', '/odometry/filtered_global')],
-            parameters=[{
-                'use_sim_time': use_sim_time,
-            }, ekf_config_global],
-        ),
+        # # Start robot localization using an Extended Kalman filter
+        # Node(
+        #     package='robot_localization',
+        #     executable='ekf_node',
+        #     name='ekf_filter_node',
+        #     output='screen',
+        #     remappings=[('tf', 'tf_ekf_global'),('/odometry/filtered', '/odometry/filtered_global')],
+        #     parameters=[{
+        #         'use_sim_time': use_sim_time,
+        #     }, ekf_config_global],
+        # ),
 
         # IncludeLaunchDescription(
         #     PythonLaunchDescriptionSource([

@@ -30,12 +30,6 @@ import time
 import sys
 import math
 
-# from scripts.go2_constants import ROBOT_CMD, RTC_TOPIC
-# from scripts.go2_func import gen_command, gen_mov_command
-# from scripts.go2_lidar_decoder import update_meshes_for_cloud2
-# from scripts.go2_math import get_robot_joints
-# from scripts.webrtc_driver import Go2Connection
-
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
@@ -365,18 +359,8 @@ async def start_node():
     time.sleep(1)
 
     base_node = RobotBaseNode()
-
     spin_task = asyncio.get_event_loop().create_task(spin(base_node))
-    sleep_task_lst = []
-
-    # conn = Go2Connection(
-    #     robot_ip=base_node.robot_ip,
-    #     robot_num='0',
-    #     token='',
-    #     on_validated=base_node.on_validated,
-    #     on_message=base_node.on_data_channel_message,
-    # )
-    
+    sleep_task_lst = []    
     sleep_task_lst.append(asyncio.get_event_loop().create_task(base_node.run()))
     await asyncio.wait([spin_task, *sleep_task_lst], return_when=asyncio.FIRST_COMPLETED)
 
