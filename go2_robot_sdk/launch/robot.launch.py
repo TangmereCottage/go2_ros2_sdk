@@ -22,7 +22,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
-from ament_index_python.packages import get_package_share_directory
+from ament_index_python.packages import get_package_share_directory, get_package_prefix
 from launch import LaunchDescription
 from launch.conditions import UnlessCondition
 from launch.substitutions import LaunchConfiguration
@@ -38,6 +38,16 @@ def generate_launch_description():
     robot_interface = LaunchConfiguration('robot_interface', default='eno3')
     rviz_config = "robot_conf.rviz"
     
+    path = get_package_prefix('go2_robot_sdk')
+    # /home/bill/ros2_ws/install/go2_robot_sdk
+
+    pathSrc = path.replace("install", "src")
+
+    mvc = '_config:=' + os.path.join(pathSrc, 'config/map.mvc')
+
+    print(mvc)
+
+
     urdf_launch_nodes = []
 
     joy_config = os.path.join(
@@ -172,7 +182,30 @@ def generate_launch_description():
             executable='rviz2',
             condition=UnlessCondition(no_rviz2),
             name='rviz2',
-            arguments=['-d' + os.path.join(get_package_share_directory('go2_robot_sdk'), 'config', rviz_config)]
+            arguments=['-d' + os.path.join(pathSrc, 'config', rviz_config)]
+        ),
+        Node(
+            package="mapviz",
+            executable="mapviz",
+            name="mapviz",
+            arguments=['_config:=' + os.path.join(pathSrc, 'config/map.mvc')]
+        ),
+        Node(
+            package="swri_transform_util",
+            executable="initialize_origin.py",
+            name="initialize_origin",
+            parameters=[
+                {"local_xy_frame" : "map"},
+                {"local_xy_origin" : "auto"},
+                {"local_xy_navsatfix_topic" : "/gps/filtered"},
+                {"use_sim_time": use_sim_time},
+            ]
+        ),
+        Node(
+            package="tf2_ros",
+            executable="static_transform_publisher",
+            name="swri_transform",
+            arguments=["0", "0", "0", "0", "0", "0", "map", "origin"]
         ),
 
         # Connects to a joystick and produces /joy messages
@@ -225,7 +258,7 @@ def generate_launch_description():
             executable='ekf_node',
             name='ekf_filter_node',
             output='screen',
-            remappings=[('tf', '/bits/tf_ekf_internal'),('/odometry/filtered', '/bits/odom_filtered_internal')],
+            remappings=[('tf', '/tf_ekf_internal'),('/odometry/filtered', '/odometry/filtered_internal')],
             parameters=[{
                 'use_sim_time': use_sim_time,
             }, ekf_config_internal],
@@ -236,7 +269,7 @@ def generate_launch_description():
             executable='ekf_node',
             name='ekf_filter_node',
             output='screen',
-            remappings=[('tf', '/bits/tf_ekf_wit'),('/odometry/filtered', '/bits/odom_filtered_wit')],
+            remappings=[('tf', '/tf_ekf_wit'),('/odometry/filtered', '/odometry/filtered_wit')],
             parameters=[{
                 'use_sim_time': use_sim_time,
             }, ekf_config_wit],
@@ -251,11 +284,11 @@ def generate_launch_description():
                 'use_sim_time': use_sim_time,
             }, ekf_config_gps],
             remappings=[
-                ("imu/data",          "/bits/imu_wit"),
-                ("gps/fix",           "/bits/gps"),
-                ("odometry/filtered", "/bits/odom_filtered_wit"),
-                ("gps/filtered",      "/bits/gps_filtered"),  #output
-                ("odometry/gps",      "/bits/odom_gps")],     #output
+                ("imu/data",          "/imu_wit"),
+                ("gps/fix",           "/gps"),
+                ("odometry/filtered", "/odometry/filtered_internal"),
+                ("gps/filtered",      "gps/filtered"),  #output
+                ("odometry/gps",      "/odometry/gps")], #output
         ),
         # Start robot localization using an Extended Kalman filter
         Node(
@@ -263,7 +296,7 @@ def generate_launch_description():
             executable='ekf_node',
             name='ekf_filter_node',
             output='screen',
-            remappings=[('tf', '/bits/tf_ekf_global'),('/odometry/filtered', '/bits/odom_filtered_global')],
+            remappings=[('tf', '/bits/tf_ekf_global'),('/odometry/filtered', '/odometry/filtered_global')],
             parameters=[{
                 'use_sim_time': use_sim_time,
             }, ekf_config_global],

@@ -182,7 +182,7 @@ class GPSPublisher : public rclcpp::Node
  
 void GPSPublisher::run(void)
 {
-  publisher_ = this->create_publisher<sensor_msgs::msg::NavSatFix>("/bits/gps", 10);
+  publisher_ = this->create_publisher<sensor_msgs::msg::NavSatFix>("/gps", 10);
   //service_ = this->create_service<gpsx::srv::GetSatList>("get_sat_list",&listGps);
   timer_ = this->create_wall_timer(50ms, std::bind(&GPSPublisher::timer_callback, this));
 }

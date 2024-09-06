@@ -228,7 +228,7 @@ class ImuMagNode(Node):
             AngY = self.getSignInt32(self.TempBytes[27] << 24 | self.TempBytes[28] << 16 | self.TempBytes[25] << 8 | self.TempBytes[26]) / 1000
             AngZ = self.getSignInt32(self.TempBytes[31] << 24 | self.TempBytes[32] << 16 | self.TempBytes[29] << 8 | self.TempBytes[30]) / 1000
 
-            self.get_logger().info(f"InternalW (DEG) Roll:{AngX} Pitch:{AngY} Yaw:{AngZ}")
+            #self.get_logger().info(f"InternalW (DEG) Roll:{AngX} Pitch:{AngY} Yaw:{AngZ}")
 
             # convert to radians
             angle_radian = [AngX * math.pi / 180, AngY * math.pi / 180, AngZ * math.pi / 180]

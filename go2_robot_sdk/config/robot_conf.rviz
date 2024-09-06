@@ -5,12 +5,17 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Image1/Topic1
+        - /Odometry1
         - /Odometry_Internal1/Shape1
+        - /Odometry_Wit1
+        - /Odometry_Wit1/Topic1
+        - /Odometry_NavSat1/Topic1
         - /Odometry_NavSat1/Shape1
         - /TF1/Frames1
         - /TF1/Tree1
+        - /Odometry_odom_gps1/Shape1
       Splitter Ratio: 0.4363636374473572
-    Tree Height: 904
+    Tree Height: 601
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Tool Properties
@@ -28,7 +33,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: LaserScan
+    SyncSource: FootPosition
   - Class: slam_toolbox::SlamToolboxPlugin
     Name: SlamToolboxPlugin
   - Class: nav2_rviz_plugins/Navigation 2
@@ -260,9 +265,9 @@ Visualization Manager:
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 243
+      Max Intensity: 249
       Min Color: 0; 0; 0
-      Min Intensity: 55
+      Min Intensity: 73
       Name: PointCloud2
       Position Transformer: XYZ
       Selectable: true
@@ -327,6 +332,20 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /image
       Value: false
+    - Class: rviz_default_plugins/Image
+      Enabled: true
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: ImageWithClassification
+      Normalize Range: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /bits/image_annotated
+      Value: true
     - Alpha: 0.699999988079071
       Class: rviz_default_plugins/Map
       Color Scheme: map
@@ -385,7 +404,7 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /bits/odom_int
+        Value: /odom
       Value: true
     - Angle Tolerance: 0.10000000149011612
       Class: rviz_default_plugins/Odometry
@@ -424,7 +443,7 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /bits/odom_filtered_internal
+        Value: /odometry/filtered_internal
       Value: true
     - Angle Tolerance: 0.10000000149011612
       Class: rviz_default_plugins/Odometry
@@ -463,7 +482,7 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /bits/odom_filtered_wit
+        Value: /odometry/filtered_wit
       Value: true
     - Angle Tolerance: 0.10000000149011612
       Class: rviz_default_plugins/Odometry
@@ -482,7 +501,7 @@ Visualization Manager:
           Scale: 1
           Value: true
         Value: true
-      Enabled: true
+      Enabled: false
       Keep: 1
       Name: Odometry_GPS
       Position Tolerance: 0.10000000149011612
@@ -503,7 +522,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /bits/odom_filtered_global
-      Value: true
+      Value: false
     - Angle Tolerance: 0.10000000149011612
       Class: rviz_default_plugins/Odometry
       Covariance:
@@ -521,7 +540,7 @@ Visualization Manager:
           Scale: 1
           Value: true
         Value: true
-      Enabled: true
+      Enabled: false
       Keep: 1
       Name: Odometry_NavSat
       Position Tolerance: 0.10000000149011612
@@ -542,7 +561,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /bits/odom_gps
-      Value: true
+      Value: false
     - Alpha: 1
       Buffer Length: 1
       Class: rviz_default_plugins/Path
@@ -610,7 +629,7 @@ Visualization Manager:
       Axes Radius: 0.10000000149011612
       Class: rviz_default_plugins/Pose
       Color: 255; 25; 0
-      Enabled: true
+      Enabled: false
       Head Length: 0.30000001192092896
       Head Radius: 0.10000000149011612
       Name: Pose
@@ -624,7 +643,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /utlidar/robot_pose
-      Value: true
+      Value: false
     - Alpha: 1
       Class: rviz_default_plugins/PointStamped
       Color: 204; 41; 204
@@ -773,19 +792,44 @@ Visualization Manager:
               {}
       Update Interval: 0
       Value: true
-    - Class: rviz_default_plugins/Image
+    - Angle Tolerance: 0.10000000149011612
+      Class: rviz_default_plugins/Odometry
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 1
+          Scale: 1
+          Value: true
+        Position:
+          Alpha: 0.30000001192092896
+          Color: 204; 51; 204
+          Scale: 1
+          Value: true
+        Value: true
       Enabled: true
-      Max Value: 1
-      Median window: 5
-      Min Value: 0
-      Name: ImageWithClassification
-      Normalize Range: true
+      Keep: 1
+      Name: Odometry_odom_gps
+      Position Tolerance: 0.10000000149011612
+      Shape:
+        Alpha: 1
+        Axes Length: 1
+        Axes Radius: 0.10000000149011612
+        Color: 255; 120; 0
+        Head Length: 0.30000001192092896
+        Head Radius: 0.10000000149011612
+        Shaft Length: 1
+        Shaft Radius: 0.05000000074505806
+        Value: Arrow
       Topic:
         Depth: 5
         Durability Policy: Volatile
+        Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /bits/image_annotated
+        Value: /bits/odom_gps
       Value: true
   Enabled: true
   Global Options:
@@ -834,7 +878,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 23.95632553100586
+      Distance: 23.73036766052246
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -849,15 +893,15 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.5847964882850647
+      Pitch: 1.0097966194152832
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz_default_plugins)
-      Yaw: 3.1823806762695312
+      Yaw: 2.8673794269561768
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 1927
+  Height: 1385
   Hide Left Dock: false
   Hide Right Dock: false
   Image:
@@ -866,7 +910,7 @@ Window Geometry:
     collapsed: false
   Navigation 2:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd0000000400000000000003a9000006d8fc020000000dfb0000001200530065006c0065006300740069006f006e00000000470000008c0000006e00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c0061007900730100000047000003cf000000f100fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d0061006700650000000324000001b60000002f00fffffffb000000220053006c0061006d0054006f006f006c0062006f00780050006c007500670069006e00000001a600000295000001cf00fffffffb00000018004e0061007600690067006100740069006f006e0020003200000002b8000003790000017100fffffffb0000000c00430061006d00650072006101000002f90000005f0000000000000000fb0000002e0049006d00610067006500570069007400680043006c0061007300730069006600690063006100740069006f006e010000041d000003020000002f00ffffff0000000100000102000006d8fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a005600690065007700730100000047000006d8000000c200fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e1000001970000000300000c5f00000040fc0100000002fb0000000800540069006d0065010000000000000c5f0000038100fffffffb0000000800540069006d00650100000000000004500000000000000000000007a6000006d800000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000400000000000003a9000004bafc020000000dfb0000001200530065006c0065006300740069006f006e00000000470000008c0000006e00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c0061007900730100000047000002a0000000f100fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d0061006700650000000324000001b60000002f00fffffffb000000220053006c0061006d0054006f006f006c0062006f00780050006c007500670069006e00000001a600000295000001cf00fffffffb00000018004e0061007600690067006100740069006f006e0020003200000002b8000003790000017100fffffffb0000000c00430061006d00650072006101000002f90000005f0000000000000000fb0000002e0049006d00610067006500570069007400680043006c0061007300730069006600690063006100740069006f006e01000002ee000002130000002f00ffffff0000000100000102000004bafc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a005600690065007700730100000047000004ba000000c200fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000008a200000040fc0100000002fb0000000800540069006d00650100000000000008a20000038100fffffffb0000000800540069006d00650100000000000004500000000000000000000003e9000004ba00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   SlamToolboxPlugin:
@@ -877,6 +921,6 @@ Window Geometry:
     collapsed: false
   Views:
     collapsed: false
-  Width: 3167
-  X: 572
-  Y: 102
+  Width: 2210
+  X: 773
+  Y: 183
