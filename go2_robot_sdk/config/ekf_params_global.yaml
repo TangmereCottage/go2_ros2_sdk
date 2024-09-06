@@ -5,34 +5,32 @@ ekf_filter_node:
         frequency: 30.0
         sensor_timeout: 0.1
         two_d_mode: false
-        publish_tf: false
+        publish_tf: true
 
-        map_frame: map                   # Defaults to "map" if unspecified
-        odom_frame: odom                 # Defaults to "odom" if unspecified
-        base_link_frame: base_link       # Defaults to "base_link" if unspecified
-        world_frame: map                # Defaults to the value of odom_frame if unspecified
+        map_frame: map                # Defaults to "map" if unspecified
+        odom_frame: odom              # Defaults to "odom" if unspecified
+        base_link_frame: base_link    # Defaults to "base_link" if unspecified
+        world_frame: map             # Defaults to the value of odom_frame if unspecified
 
-        odom0: /bits/imu_int
-        odom0_config: [true,  true,   true,
+        # position, orientation, twist-linear, twist-angular
+        odom0: /bits/odom_int
+        odom0_config: [true,  true,   true, # position from feet servos - not really sure how this is computed
                        false, false, false,
                        true,  true,   true,
                        true,  true,   true,
                        false, false, false]
-
         #        [x_pos   , y_pos    , z_pos,   we have those
         #         roll    , pitch    , yaw,     and we have those, too (quarterion)
         #         x_vel   , y_vel    , z_vel,   twist: linear velocity
         #         roll_vel, pitch_vel, yaw_vel, twist: angular velocity - gyro
         #         x_accel , y_accel  , z_accel] accelerometer
-
         odom0_queue_size: 10
         odom0_differential: false
         odom0_relative: false
-        #odom0_pose_rejection_threshold: 5.0
-        #odom0_twist_rejection_threshold: 1.0
 
-        odom1: /bits/gps
-        odom1_config: [true,  true,  true,
+        # for the GPS we only have X and Y position
+        odom1: /bits/odom_gps
+        odom1_config: [true,  true,  false,
                        false, false, false,
                        false, false, false,
                        false, false, false,
@@ -41,24 +39,22 @@ ekf_filter_node:
         odom1_differential: false
         odom1_relative: false
 
+        # this is the wit IMU which has a magnetometer
         imu0: /bits/imu_wit
         imu0_config: [false, false, false,
                       true,  true,  true,
                       false, false, false,
                       true,  true,  true,
                       true,  true,  true]    
-
-        #        [x_pos   , y_pos    , z_pos,   do not have these since this is a 6DoF IMU
+        #        [x_pos   , y_pos    , z_pos,   do not have from the IMU 
         #         roll    , pitch    , yaw,     we have those since we have quarterion data
-        #         x_vel   , y_vel    , z_vel,   do not have these
+        #         x_vel   , y_vel    , z_vel,   do not have these from the IMU
         #         roll_vel, pitch_vel, yaw_vel, we have these - this is gyro
         #         x_accel , y_accel  , z_accel] we have these - this is accelerometer
-        
         imu0_differential: false
         imu0_relative: false
         imu0_queue_size: 10
-        imu0_remove_gravitational_acceleration: true
-
+        
 # [ADVANCED] Some IMUs automatically remove acceleration due to gravity, and others don't. If yours doesn't, please set
 # this to true, and *make sure* your data conforms to REP-103, specifically, that the data is in ENU frame.
         imu0_remove_gravitational_acceleration: true

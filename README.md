@@ -37,10 +37,6 @@ position_covariance:
 - 0.0
 ```
 
-
-
-
-
 ![Ros2 SDK](https://github.com/abizovnuralem/go2_ros2_sdk/assets/33475993/49edebbe-11b6-49c6-b82d-bc46257674bd)
 
 # Welcome to the Unitree Go2 ROS2 SDK Project!
@@ -561,3 +557,20 @@ It is currently developed and tested with ROS2 Foxy Fitzroy and Humble Hawksbill
 Additional parameters can be added for connection speed and connection port e.g.
 
 ```ros2 run gpsx gps_node --ros-args -p "comm_port:=/dev/ttyUSB1" -p "comm_speed:=9600"```
+
+
+
+utlidar/robot_pose 
+
+position
+orientation
+
+utlidar/robot_odom
+
+position
+orientation
+twist-linear
+twist-angualar
+
+utlidar/imu is different!
+

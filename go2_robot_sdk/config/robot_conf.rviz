@@ -6,6 +6,7 @@ Panels:
       Expanded:
         - /Image1/Topic1
         - /Odometry_Internal1/Shape1
+        - /Odometry_NavSat1/Shape1
         - /TF1/Frames1
         - /TF1/Tree1
       Splitter Ratio: 0.4363636374473572
@@ -259,9 +260,9 @@ Visualization Manager:
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 229
+      Max Intensity: 243
       Min Color: 0; 0; 0
-      Min Intensity: 79
+      Min Intensity: 55
       Name: PointCloud2
       Position Transformer: XYZ
       Selectable: true
@@ -423,7 +424,7 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /bits/odometry/filtered_internal
+        Value: /bits/odom_filtered_internal
       Value: true
     - Angle Tolerance: 0.10000000149011612
       Class: rviz_default_plugins/Odometry
@@ -443,7 +444,7 @@ Visualization Manager:
           Value: true
         Value: true
       Enabled: true
-      Keep: 2
+      Keep: 1
       Name: Odometry_Wit
       Position Tolerance: 0.10000000149011612
       Shape:
@@ -462,7 +463,7 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /bits/odometry/filtered_wit
+        Value: /bits/odom_filtered_wit
       Value: true
     - Angle Tolerance: 0.10000000149011612
       Class: rviz_default_plugins/Odometry
@@ -482,7 +483,7 @@ Visualization Manager:
           Value: true
         Value: true
       Enabled: true
-      Keep: 100
+      Keep: 1
       Name: Odometry_GPS
       Position Tolerance: 0.10000000149011612
       Shape:
@@ -501,7 +502,46 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /bits/odometry/filtered_global
+        Value: /bits/odom_filtered_global
+      Value: true
+    - Angle Tolerance: 0.10000000149011612
+      Class: rviz_default_plugins/Odometry
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 1
+          Scale: 1
+          Value: true
+        Position:
+          Alpha: 0.30000001192092896
+          Color: 204; 51; 204
+          Scale: 1
+          Value: true
+        Value: true
+      Enabled: true
+      Keep: 1
+      Name: Odometry_NavSat
+      Position Tolerance: 0.10000000149011612
+      Shape:
+        Alpha: 1
+        Axes Length: 1
+        Axes Radius: 0.10000000149011612
+        Color: 246; 211; 45
+        Head Length: 0.30000001192092896
+        Head Radius: 0.10000000149011612
+        Shaft Length: 1
+        Shaft Radius: 0.05000000074505806
+        Value: Arrow
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /bits/odom_gps
       Value: true
     - Alpha: 1
       Buffer Length: 1
@@ -794,7 +834,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 11.219526290893555
+      Distance: 23.95632553100586
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -809,10 +849,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.4497966468334198
+      Pitch: 0.5847964882850647
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz_default_plugins)
-      Yaw: 3.67238450050354
+      Yaw: 3.1823806762695312
     Saved: ~
 Window Geometry:
   Displays:

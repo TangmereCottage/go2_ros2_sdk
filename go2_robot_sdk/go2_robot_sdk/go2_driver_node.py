@@ -88,20 +88,21 @@ class RobotBaseNode(Node):
         self.client.Init()
 
         self.joint_pub = []
-        #self.go2_state_pub = []
         self.lidar_pub = []
         self.odometry_pub = []
-        self.imu_pub = []
+        self.imu_main_pub = []
+        self.imu_lidar_pub = []
 
-        self.joint_pub.append(self.create_publisher(JointState, 'joint_states', qos_profile))
-        #self.go2_state_pub.append(self.create_publisher(Go2State, f'SDK/robot0/go2_states', qos_profile))
+        self.joint_pub.append(self.create_publisher(JointState,  'joint_states'      , qos_profile))
         self.lidar_pub.append(self.create_publisher(PointCloud2, '/bits/point_cloud2', qos_profile))
-        self.odometry_pub.append(self.create_publisher(Odometry, '/bits/odom_int', qos_profile))
-        self.imu_pub.append(self.create_publisher(Imu,           '/bits/imu_int', qos_profile))
+        self.odometry_pub.append(self.create_publisher(Odometry, 'odom_int'    , qos_profile))
+        
+        self.imu_main_pub.append( self.create_publisher(Imu, 'imu_main', qos_profile))
+        self.imu_lidar_pub.append(self.create_publisher(Imu, 'imu_lidar', qos_profile))
 
         # Broadcast TF information
-        # this does all the TF, probably
-        # needs the profile and the pose data  
+        # needs the profile, the joint states, and the /utlidar/robot_pose
+        # TF_broadcaster gets odom directly, from /utlidar/robot_pose
         self.TF_broadcaster = TransformBroadcaster(self, qos=qos_profile)
 
         self.robot_cmd_vel = {}
@@ -122,18 +123,20 @@ class RobotBaseNode(Node):
 
         # power, temp, IMU state
         # this feeds into the joint_states, which are needed for the TF
+        # this is giving us the main IMU
         self.create_subscription(
             LowState,
             'lowstate',
-            self.publish_joint_state_imu_cyclonedds,
+            self.publish_lowstate_cyclonedds,
             qos_profile)
 
         # frame_id: odom
         # postion/orientation
+        # this just duplicates the robot_odom, but in PoseStamped
         self.create_subscription(
             PoseStamped,
             '/utlidar/robot_pose',
-            self.publish_body_poss_cyclonedds,
+            self.publish_tf_cyclonedds,
             qos_profile)
 
         # frame_id: odom
@@ -144,6 +147,9 @@ class RobotBaseNode(Node):
             self.publish_odom_cyclonedds,
             qos_profile)
 
+        # odom has pose and twist
+        # PoseStamped has position and orientation
+
         # subscribe to the raw LIDAR data
         # frame_id: odom already
         # but we do not know how good that is?
@@ -151,6 +157,12 @@ class RobotBaseNode(Node):
             PointCloud2,
             '/utlidar/cloud_deskewed',
             self.publish_lidar_cyclonedds,
+            qos_profile)
+
+        self.create_subscription(
+            Imu,
+            '/utlidar/imu',
+            self.publish_lidar_imu_cyclonedds,
             qos_profile)
 
     # subscribe to /joy and send those data to self.joy_state
@@ -176,11 +188,12 @@ class RobotBaseNode(Node):
             time.sleep(0.1)
             self.client.StopMove()
 
-    # this is body pose and is being sent to TF
-    # coming from '/utlidar/robot_pose'
-    def publish_body_poss_cyclonedds(self, msg):
+    # this is pose and is being sent to TF
+    # data coming from '/utlidar/robot_pose'
+    # the joint states are published seperately and are then added via robot_state_publisher, see the launch file
+    def publish_tf_cyclonedds(self, msg):
         odom_trans = TransformStamped()
-        odom_trans.header.stamp = msg.header.stamp #self.get_clock().now().to_msg()
+        odom_trans.header.stamp = msg.header.stamp
         odom_trans.header.frame_id = 'odom'
         odom_trans.child_frame_id = 'base_link'
         odom_trans.transform.translation.x = msg.pose.position.x
@@ -193,7 +206,8 @@ class RobotBaseNode(Node):
         self.TF_broadcaster.sendTransform(odom_trans)
 
     # joint states are angles and therefore do not have/need a frame_id 
-    def publish_joint_state_imu_cyclonedds(self, msg):
+    def publish_lowstate_cyclonedds(self, msg):
+        
         joint_state = JointState()
         joint_state.header.stamp = self.get_clock().now().to_msg()
         joint_state.name = [
@@ -240,30 +254,35 @@ class RobotBaseNode(Node):
         imu_msg.orientation_covariance[0] = 0.00001
         imu_msg.orientation_covariance[4] = 0.00001
         imu_msg.orientation_covariance[8] = 0.00001
-
         orientation_list = [float(quat_x), float(quat_y), float(quat_z), float(quat_w)]
         (roll, pitch, yaw) = euler_from_quaternion(orientation_list)
+
+        # these are the same thing - the imu driver is just doing the same math
+        # rolli  = msg.imu_state.rpy[0]
+        # pitchi = msg.imu_state.rpy[1]
+        # yawi   = msg.imu_state.rpy[2]
+
         # self.get_logger().info(f"Internal (RAD) Roll:{roll} Pitch:{pitch} Yaw:{yaw}")
+        self.get_logger().info(f"InternalQ (DEG) Roll:{roll*57.2958} Pitch:{pitch*57.2958} Yaw:{yaw*57.2958}")
+        #self.get_logger().info(f"InternalD (DEG) Roll:{rolli*57.2958} Pitch:{pitchi*57.2958} Yaw:{yawi*57.2958}")
 
-        # these are the same thing!
-        rolli  = msg.imu_state.rpy[0]
-        pitchi = msg.imu_state.rpy[1]
-        yawi   = msg.imu_state.rpy[2]
-        # self.get_logger().info(f"InternalQ (DEG) Roll:{roll*57.2958} Pitch:{pitch*57.2958} Yaw:{yaw*57.2958}")
-        # self.get_logger().info(f"InternalD (DEG) Roll:{rolli*57.2958} Pitch:{pitchi*57.2958} Yaw:{yawi*57.2958}")
-
-        self.imu_pub[0].publish(imu_msg)
+        self.imu_main_pub[0].publish(imu_msg)
 
     def publish_lidar_cyclonedds(self, msg):
-        # NOTE - we are listening to /utlidar/cloud_deskewed - that uses odom already
-        # msg.header = Header(frame_id="odom") 
-        # no need because /utlidar/cloud_deskewed directly uses odom
-        # msg.header.stamp = self.get_clock().now().to_msg()
-        # no need because the time should be good
         self.lidar_pub[0].publish(msg)
 
     def publish_odom_cyclonedds(self, msg):
         self.odometry_pub[0].publish(msg)
+
+    def publish_lidar_imu_cyclonedds(self, msg):
+        quat_x = msg.orientation.x
+        quat_y = msg.orientation.y
+        quat_z = msg.orientation.z
+        quat_w = msg.orientation.w
+        orientation_list = [float(quat_x), float(quat_y), float(quat_z), float(quat_w)]
+        (roll, pitch, yaw) = euler_from_quaternion(orientation_list)
+        self.get_logger().info(f"InternalL (DEG) Roll:{roll*57.2958} Pitch:{pitch*57.2958} Yaw:{yaw*57.2958}")
+        self.imu_lidar_pub[0].publish(msg)
 
     def joy_cmd(self):
         # Sit Down

@@ -98,6 +98,7 @@ def generate_launch_description():
         # print("robot_description\n", robot_desc)
 
     # this listens to joint_states
+    # this provides PART of the /tf, namely the state of all the limbs and the sensors 
     urdf_launch_nodes.append(
         Node(
             package='robot_state_publisher',
@@ -114,7 +115,6 @@ def generate_launch_description():
 
     # this is giving us a synthetic laserscan channel
     # takes /utlidar/cloud_deskewed and generates /scan messages
-    # can we get those more directly, too?
     urdf_launch_nodes.append(
         Node(
             package='pointcloud_to_laserscan',
@@ -225,7 +225,7 @@ def generate_launch_description():
             executable='ekf_node',
             name='ekf_filter_node',
             output='screen',
-            remappings=[('tf', '/bits/tf_ekf_internal'),('/odometry/filtered', '/bits/odometry/filtered_internal')],
+            remappings=[('tf', '/bits/tf_ekf_internal'),('/odometry/filtered', '/bits/odom_filtered_internal')],
             parameters=[{
                 'use_sim_time': use_sim_time,
             }, ekf_config_internal],
@@ -236,23 +236,12 @@ def generate_launch_description():
             executable='ekf_node',
             name='ekf_filter_node',
             output='screen',
-            remappings=[('tf', '/bits/tf_ekf_wit'),('/odometry/filtered', '/bits/odometry/filtered_wit')],
+            remappings=[('tf', '/bits/tf_ekf_wit'),('/odometry/filtered', '/bits/odom_filtered_wit')],
             parameters=[{
                 'use_sim_time': use_sim_time,
             }, ekf_config_wit],
         ),
-
-        # Start robot localization using an Extended Kalman filter
-        Node(
-            package='robot_localization',
-            executable='ekf_node',
-            name='ekf_filter_node',
-            output='screen',
-            remappings=[('tf', '/bits/tf_ekf_global'),('/odometry/filtered', '/bits/odometry/filtered_global')],
-            parameters=[{
-                'use_sim_time': use_sim_time,
-            }, ekf_config_global],
-        ),
+        # this flows into the other EKF node 
         Node(
             package="robot_localization",
             executable="navsat_transform_node",
@@ -262,12 +251,24 @@ def generate_launch_description():
                 'use_sim_time': use_sim_time,
             }, ekf_config_gps],
             remappings=[
-                ("imu/data", "/bits/imu_wit"),
-                ("gps/fix", "/bits/gps"),
-                ("odometry/filtered", "/bits/odom_int"),
-                ("gps/filtered", "/bits/gps/filtered"),  #output
-                ("odometry/gps", "/bits/odometry/gps")], #output
+                ("imu/data",          "/bits/imu_wit"),
+                ("gps/fix",           "/bits/gps"),
+                ("odometry/filtered", "/bits/odom_filtered_wit"),
+                ("gps/filtered",      "/bits/gps_filtered"),  #output
+                ("odometry/gps",      "/bits/odom_gps")],     #output
         ),
+        # Start robot localization using an Extended Kalman filter
+        Node(
+            package='robot_localization',
+            executable='ekf_node',
+            name='ekf_filter_node',
+            output='screen',
+            remappings=[('tf', '/bits/tf_ekf_global'),('/odometry/filtered', '/bits/odom_filtered_global')],
+            parameters=[{
+                'use_sim_time': use_sim_time,
+            }, ekf_config_global],
+        ),
+
 
 # Subscribed Topics
 #     imu/data A sensor_msgs/Imu message with orientation data

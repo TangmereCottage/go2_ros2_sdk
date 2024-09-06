@@ -120,8 +120,8 @@ class ImuMagNode(Node):
 
         qos_profile = QoSProfile(depth=10)
 
-        self.publisher_imu = self.create_publisher(Imu, '/bits/imu_wit', qos_profile)
-        self.publisher_mag = self.create_publisher(MagneticField, '/bits/mag_wit', qos_profile)
+        self.publisher_imu = self.create_publisher(Imu, 'imu_wit', qos_profile)
+        self.publisher_mag = self.create_publisher(MagneticField, 'mag_wit', qos_profile)
           
         # Check the sensor
         timer_period = 0.02
@@ -205,38 +205,22 @@ class ImuMagNode(Node):
             self.mag_msg.header.stamp = stamp
             self.mag_msg.header.frame_id = "IMU"
             
+            # these are flipped, inverted, and differently scaled than the unitree ones
             AccX = self.getSignInt16(self.TempBytes[3] << 8 | self.TempBytes[4]) / 32768 * 16
             AccY = self.getSignInt16(self.TempBytes[5] << 8 | self.TempBytes[6]) / 32768 * 16
             AccZ = self.getSignInt16(self.TempBytes[7] << 8 | self.TempBytes[8]) / 32768 * 16
+            self.imu_msg.linear_acceleration.x = AccY *  9.80665
+            self.imu_msg.linear_acceleration.y = AccX *  9.80665 * -1.0 # axes are flipped compared to unitree
+            self.imu_msg.linear_acceleration.z = AccZ *  9.80665
 
-            self.imu_msg.linear_acceleration.x = AccX
-            self.imu_msg.linear_acceleration.y = AccY
-            self.imu_msg.linear_acceleration.z = AccZ
-
-            AsX = self.getSignInt16(self.TempBytes[ 9] << 8 | self.TempBytes[10]) / 32768 * 2000
-            AsY = self.getSignInt16(self.TempBytes[11] << 8 | self.TempBytes[12]) / 32768 * 2000
-            AsZ = self.getSignInt16(self.TempBytes[13] << 8 | self.TempBytes[14]) / 32768 * 2000
-            self.imu_msg.angular_velocity.x = AsX
-            self.imu_msg.angular_velocity.y = AsY
+            # these are flipped, inverted, and differently scaled than the unitree ones
+            # these used to be multiplied by 2000, now multiplying by 40  
+            AsX = self.getSignInt16(self.TempBytes[ 9] << 8 | self.TempBytes[10]) / 32768 * 40
+            AsY = self.getSignInt16(self.TempBytes[11] << 8 | self.TempBytes[12]) / 32768 * 40
+            AsZ = self.getSignInt16(self.TempBytes[13] << 8 | self.TempBytes[14]) / 32768 * 40
+            self.imu_msg.angular_velocity.x = AsY * -1 # axes are flipped compared to unitree
+            self.imu_msg.angular_velocity.y = AsX
             self.imu_msg.angular_velocity.z = AsZ
-
-            # what are the units? These might be in Gauss?
-            # looks like milliT 
-            # The magnetometer supports mT(millit), Gs(Gauss), 1mT=10Gs, measuring range from 0-2500mT(25000Gs)
-            # x: -22.425
-            # y: -11.765
-            # z: -46.982
-            # does not actually matter, probably, as long as the offsets are in the same units 
-
-            HX = self.getSignInt16(self.TempBytes[15] << 8 | self.TempBytes[16]) * 13 / 1000
-            HY = self.getSignInt16(self.TempBytes[17] << 8 | self.TempBytes[18]) * 13 / 1000
-            HZ = self.getSignInt16(self.TempBytes[19] << 8 | self.TempBytes[20]) * 13 / 1000
-            self.mag_msg.magnetic_field.x = HX
-            self.mag_msg.magnetic_field.y = HY
-            self.mag_msg.magnetic_field.z = HZ
-            # values from hard iron calibration
-            # spin robot left and right in both directions and determine the 
-            # center of the resulting x,y circle when the data are plotted - that's the offet to subtract
 
             # this is already in an absolute frame?
             # Yes, this is with magnetometer data in it
@@ -244,7 +228,7 @@ class ImuMagNode(Node):
             AngY = self.getSignInt32(self.TempBytes[27] << 24 | self.TempBytes[28] << 16 | self.TempBytes[25] << 8 | self.TempBytes[26]) / 1000
             AngZ = self.getSignInt32(self.TempBytes[31] << 24 | self.TempBytes[32] << 16 | self.TempBytes[29] << 8 | self.TempBytes[30]) / 1000
 
-            # self.get_logger().info(f"WitMotion (DEG) Roll:{AngX} Pitch:{AngY} Yaw:{AngZ}")
+            self.get_logger().info(f"InternalW (DEG) Roll:{AngX} Pitch:{AngY} Yaw:{AngZ}")
 
             # convert to radians
             angle_radian = [AngX * math.pi / 180, AngY * math.pi / 180, AngZ * math.pi / 180]
@@ -256,6 +240,23 @@ class ImuMagNode(Node):
             self.imu_msg.orientation.w = qua[3]
 
             self.publisher_imu.publish(self.imu_msg)
+            
+            # what are the units? These might be in Gauss?
+            # looks like milliT 
+            # The magnetometer supports mT(millit), Gs(Gauss), 1mT=10Gs, measuring range from 0-2500mT(25000Gs)
+            # x: -22.425
+            # y: -11.765
+            # z: -46.982
+            # does not actually matter, probably, as long as the offsets are in the same units 
+            HX = self.getSignInt16(self.TempBytes[15] << 8 | self.TempBytes[16]) * 13 / 1000
+            HY = self.getSignInt16(self.TempBytes[17] << 8 | self.TempBytes[18]) * 13 / 1000
+            HZ = self.getSignInt16(self.TempBytes[19] << 8 | self.TempBytes[20]) * 13 / 1000
+            self.mag_msg.magnetic_field.x = HX
+            self.mag_msg.magnetic_field.y = HY
+            self.mag_msg.magnetic_field.z = HZ
+            # values from hard iron calibration
+            # spin robot left and right in both directions and determine the 
+            # center of the resulting x,y circle when the data are plotted - that's the offet to subtract
             self.publisher_mag.publish(self.mag_msg)
 
         self.TempBytes.clear()
