@@ -7,11 +7,11 @@ enable_antialiasing: true
 show_displays: true
 show_status_bar: true
 show_capture_tools: true
-window_width: 2377
-window_height: 1083
-view_scale: 0.276184112
-offset_x: 1
-offset_y: 5
+window_width: 2755
+window_height: 1109
+view_scale: 0.0496741422
+offset_x: 0.229234174
+offset_y: 0
 use_latest_transforms: true
 background: "#a0a0a4"
 image_transport: raw
@@ -22,19 +22,26 @@ displays:
       visible: true
       collapsed: false
       custom_sources:
-        []
+        - base_url: s3://long-term.cache.maps.stamen.com/watercolor/{level}/{x}/{y}.jpg
+          max_zoom: 19
+          name: AWS
+          type: wmts
+        - base_url: https://tile.openstreetmap.org/{level}/{x}/{y}.png
+          max_zoom: 19
+          name: OpenStreetMap
+          type: wmts
       bing_api_key: ""
-      source: Stamen (watercolor)
+      source: OpenStreetMap
   - type: mapviz_plugins/navsat
     name: new display
     config:
       visible: true
       collapsed: false
       topic: /gps/filtered
-      color: "#00ff00"
-      draw_style: lines
-      position_tolerance: 0
-      buffer_size: 0
+      color: "#e01b24"
+      draw_style: points
+      position_tolerance: 0.050000000000000003
+      buffer_size: 100
       qos_depth: 10
       qos_history: 1
       qos_reliability: 1

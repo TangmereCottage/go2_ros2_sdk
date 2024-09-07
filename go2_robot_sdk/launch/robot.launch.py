@@ -42,11 +42,8 @@ def generate_launch_description():
     # /home/bill/ros2_ws/install/go2_robot_sdk
 
     pathSrc = path.replace("install", "src")
-
     mvc = '_config:=' + os.path.join(pathSrc, 'config/map.mvc')
-
     print(mvc)
-
 
     urdf_launch_nodes = []
 
@@ -258,22 +255,24 @@ def generate_launch_description():
             executable='ekf_node',
             name='ekf_filter_node',
             output='screen',
-            remappings=[('tf', '/tf_ekf_internal'),('/odometry/filtered', '/odometry/filtered_internal')],
+            remappings=[
+                ('/odometry/filtered', '/odometry/filtered_internal')],
             parameters=[{
                 'use_sim_time': use_sim_time,
             }, ekf_config_internal],
         ),
-
-        Node(
-            package='robot_localization',
-            executable='ekf_node',
-            name='ekf_filter_node',
-            output='screen',
-            remappings=[('tf', '/tf_ekf_wit'),('/odometry/filtered', '/odometry/filtered_wit')],
-            parameters=[{
-                'use_sim_time': use_sim_time,
-            }, ekf_config_wit],
-        ),
+        # Node(
+        #     package='robot_localization',
+        #     executable='ekf_node',
+        #     name='ekf_filter_node',
+        #     output='screen',
+        #     remappings=[
+        #         ('tf', '/tf_ekf_wit'),
+        #         ('/odometry/filtered', '/odometry/filtered_wit')],
+        #     parameters=[{
+        #         'use_sim_time': use_sim_time,
+        #     }, ekf_config_wit],
+        # ),
         # this flows into the other EKF node 
         Node(
             package="robot_localization",
@@ -284,11 +283,11 @@ def generate_launch_description():
                 'use_sim_time': use_sim_time,
             }, ekf_config_gps],
             remappings=[
-                ("imu/data",          "/imu_wit"),
-                ("gps/fix",           "/gps"),
-                ("odometry/filtered", "/odometry/filtered_internal"),
-                ("gps/filtered",      "gps/filtered"),  #output
-                ("odometry/gps",      "/odometry/gps")], #output
+                ("imu/data",          "/imu_wit"),                    # gives mag
+                ("gps/fix",           "/gps"),                        # gives gps postion
+                ("odometry/filtered", "/odometry/filtered_internal"), # 
+                ("gps/filtered",      "/gps/filtered"),               # output
+                ("odometry/gps",      "/odometry/gps")],              # output
         ),
         # Start robot localization using an Extended Kalman filter
         Node(
@@ -296,7 +295,9 @@ def generate_launch_description():
             executable='ekf_node',
             name='ekf_filter_node',
             output='screen',
-            remappings=[('tf', '/bits/tf_ekf_global'),('/odometry/filtered', '/odometry/filtered_global')],
+            remappings=[
+                ('/odometry/filtered', '/odometry/filtered_global')
+            ],
             parameters=[{
                 'use_sim_time': use_sim_time,
             }, ekf_config_global],
