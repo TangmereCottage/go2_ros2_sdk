@@ -7,9 +7,9 @@ enable_antialiasing: true
 show_displays: true
 show_status_bar: true
 show_capture_tools: true
-window_width: 2755
-window_height: 1109
-view_scale: 0.0496741422
+window_width: 1965
+window_height: 1070
+view_scale: 0.0430567488
 offset_x: 0.229234174
 offset_y: 0
 use_latest_transforms: true
@@ -20,7 +20,7 @@ displays:
     name: new display
     config:
       visible: true
-      collapsed: false
+      collapsed: true
       custom_sources:
         - base_url: s3://long-term.cache.maps.stamen.com/watercolor/{level}/{x}/{y}.jpg
           max_zoom: 19
@@ -36,12 +36,52 @@ displays:
     name: new display
     config:
       visible: true
-      collapsed: false
+      collapsed: true
       topic: /gps/filtered
       color: "#e01b24"
       draw_style: points
       position_tolerance: 0.050000000000000003
       buffer_size: 100
+      qos_depth: 10
+      qos_history: 1
+      qos_reliability: 1
+      qos_durability: 2
+  - type: mapviz_plugins/odometry
+    name: new display
+    config:
+      visible: true
+      collapsed: false
+      topic: /odometry/gps
+      color: "#00ff00"
+      draw_style: lines
+      position_tolerance: 0
+      buffer_size: 14
+      show_laps: false
+      show_covariance: false
+      show_all_covariances: false
+      static_arrow_sizes: true
+      arrow_size: 126
+      show_timestamps: 0
+      qos_depth: 10
+      qos_history: 1
+      qos_reliability: 2
+      qos_durability: 2
+  - type: mapviz_plugins/odometry
+    name: new display
+    config:
+      visible: true
+      collapsed: false
+      topic: /odometry/filtered_global
+      color: "#813d9c"
+      draw_style: arrows
+      position_tolerance: 2
+      buffer_size: 10
+      show_laps: false
+      show_covariance: false
+      show_all_covariances: false
+      static_arrow_sizes: true
+      arrow_size: 62
+      show_timestamps: 0
       qos_depth: 10
       qos_history: 1
       qos_reliability: 1

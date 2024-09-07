@@ -127,11 +127,11 @@ def generate_launch_description():
             package='pointcloud_to_laserscan',
             executable='pointcloud_to_laserscan_node',
             name='pointcloud_to_laserscan',
-            remappings=[('cloud_in', '/bits/point_cloud2'),('scan', '/bits/scan')],
+            remappings=[
+                ('cloud_in', 'point_cloud2'),
+                ('scan',     'scan')],
             parameters=[{
-                'target_frame': 'base_link', 
-                #'angle_min'       : -1.04,
-                #'angle_max'       :  1.0,
+                'target_frame'    : 'base_link', 
                 'angle_increment' :  0.01,
                 'min_height'      :  0.10,
                 'max_height'      :  2.00,
@@ -235,21 +235,11 @@ def generate_launch_description():
                 'use_sim_time': use_sim_time
             }, mux_config],
         ),
-
-        # this produces /gpsx
-        # Start GPS
         Node(
             package='gpsx',
             executable='gps_node',
             output='screen',
-            #remappings=[('gpsx', 'gpsx_raw')],
-            #remappings=[('tf', 'tf_ekf')],
-            #parameters=[{
-            #    'use_sim_time': use_sim_time,
-            #}, ekf_config],
         ),
-
-        # Start robot localization using an Extended Kalman filter
         Node(
             package='robot_localization',
             executable='ekf_node',
@@ -261,19 +251,6 @@ def generate_launch_description():
                 'use_sim_time': use_sim_time,
             }, ekf_config_internal],
         ),
-        # Node(
-        #     package='robot_localization',
-        #     executable='ekf_node',
-        #     name='ekf_filter_node',
-        #     output='screen',
-        #     remappings=[
-        #         ('tf', '/tf_ekf_wit'),
-        #         ('/odometry/filtered', '/odometry/filtered_wit')],
-        #     parameters=[{
-        #         'use_sim_time': use_sim_time,
-        #     }, ekf_config_wit],
-        # ),
-        # this flows into the other EKF node 
         Node(
             package="robot_localization",
             executable="navsat_transform_node",
@@ -289,7 +266,6 @@ def generate_launch_description():
                 ("gps/filtered",      "/gps/filtered"),               # output
                 ("odometry/gps",      "/odometry/gps")],              # output
         ),
-        # Start robot localization using an Extended Kalman filter
         Node(
             package='robot_localization',
             executable='ekf_node',
@@ -302,17 +278,6 @@ def generate_launch_description():
                 'use_sim_time': use_sim_time,
             }, ekf_config_global],
         ),
-
-
-# Subscribed Topics
-#     imu/data A sensor_msgs/Imu message with orientation data
-#     odometry/filtered A nav_msgs/Odometry message of your robot’s current position. This is needed in the event that your first GPS reading comes after your robot has attained some non-zero pose.
-#     gps/fix A sensor_msgs/NavSatFix message containing your robot’s GPS coordinates
-# Published Topics
-#     odometry/gps A nav_msgs/Odometry message containing the GPS coordinates of your robot, transformed 
-#         into its world coordinate frame. This message can be directly fused into robot_localization’s state estimation nodes.
-#     gps/filtered (optional) A sensor_msgs/NavSatFix message containing your robot’s world frame position, transformed into GPS coordinates
-
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource([
                 os.path.join(get_package_share_directory(
