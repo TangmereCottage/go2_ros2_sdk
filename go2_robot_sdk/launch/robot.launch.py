@@ -252,11 +252,11 @@ def generate_launch_description():
                 'use_sim_time': use_sim_time,
             }, ekf_config_gps],
             remappings=[
-                ("imu/data",          "/imu_wit"),       # imu with quarterion with mag
+                ("imu/data",          "/imu_main"),      # imu with quarterion with mag
                 ("gps/fix",           "/gpsx"),          # gps position
                 ("odometry/filtered", "/odom_mag"),      # odom with direction
-                ("gps/filtered",      "/gps/filtered"),  # output
-                ("odometry/gps",      "/odom_navsat")],  # output
+                ("gps/filtered",      "/gps/filtered"),  # output - very good
+                ("odometry/gps",      "/odom_navsat")],  # output - crappy
         ),
         Node(
             package='robot_localization',
