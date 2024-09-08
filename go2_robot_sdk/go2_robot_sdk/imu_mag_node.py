@@ -23,7 +23,7 @@ from sensor_msgs.msg import MagneticField
 
 from std_msgs.msg import String
 
-from tf_transformations import quaternion_from_euler
+from tf_transformations import quaternion_from_euler, euler_from_quaternion
 
 def hex_to_short(raw_data):
     return list(struct.unpack("hhh", bytearray(raw_data)))
@@ -205,45 +205,78 @@ class ImuMagNode(Node):
             self.mag_msg.header.stamp = stamp
             self.mag_msg.header.frame_id = "IMU"
             
-            # these are flipped, inverted, and differently scaled than the unitree ones
+            # NOTE, the x and y axis are flipped compared to unitree
+
             AccX = self.getSignInt16(self.TempBytes[3] << 8 | self.TempBytes[4]) / 32768 * 16
             AccY = self.getSignInt16(self.TempBytes[5] << 8 | self.TempBytes[6]) / 32768 * 16
             AccZ = self.getSignInt16(self.TempBytes[7] << 8 | self.TempBytes[8]) / 32768 * 16
+            
             self.imu_msg.linear_acceleration.x = AccY *  9.80665
-            self.imu_msg.linear_acceleration.y = AccX *  9.80665 * -1.0 # axes are flipped compared to unitree
+            self.imu_msg.linear_acceleration.y = AccX *  9.80665 * -1.0 # gravity is inverted compared to unitree
             self.imu_msg.linear_acceleration.z = AccZ *  9.80665
 
-            # these are flipped, inverted, and differently scaled than the unitree ones
-            # these used to be multiplied by 2000, now multiplying by 40  
+            # these used to be multiplied by 2000, now multiplying by 40 to bring in line with unitree 
             AsX = self.getSignInt16(self.TempBytes[ 9] << 8 | self.TempBytes[10]) / 32768 * 40
             AsY = self.getSignInt16(self.TempBytes[11] << 8 | self.TempBytes[12]) / 32768 * 40
             AsZ = self.getSignInt16(self.TempBytes[13] << 8 | self.TempBytes[14]) / 32768 * 40
-            self.imu_msg.angular_velocity.x = AsY * -1 # axes are flipped compared to unitree
+            
+            self.imu_msg.angular_velocity.x = AsY * -1.0 # the rotation direction is opposite to Unitree
             self.imu_msg.angular_velocity.y = AsX
             self.imu_msg.angular_velocity.z = AsZ
 
             # this is already in an absolute frame?
-            # Yes, this is with magnetometer data in it
+            # Yes, contains magnetometer data
             AngX = self.getSignInt32(self.TempBytes[23] << 24 | self.TempBytes[24] << 16 | self.TempBytes[21] << 8 | self.TempBytes[22]) / 1000
             AngY = self.getSignInt32(self.TempBytes[27] << 24 | self.TempBytes[28] << 16 | self.TempBytes[25] << 8 | self.TempBytes[26]) / 1000
             AngZ = self.getSignInt32(self.TempBytes[31] << 24 | self.TempBytes[32] << 16 | self.TempBytes[29] << 8 | self.TempBytes[30]) / 1000
 
-            #self.get_logger().info(f"InternalW (DEG) Roll:{AngX} Pitch:{AngY} Yaw:{AngZ}")
+            # self.get_logger().info(f"rpy wit:{AngX} {AngY} {AngZ}")
 
             # convert to radians
-            angle_radian = [AngX * math.pi / 180, AngY * math.pi / 180, AngZ * math.pi / 180]
+            # note that X and Y are flipped WRT unitree, and the pitch goes the other way, sign wise
+            # quaternion_from_euler(roll, pitch, yaw):
+            #     """
+            #     Converts euler roll, pitch, yaw to quaternion (w in last place)
+            #     quat = [x, y, z, w]
+
+            # convert to radians
+            angle_radian = [AngY * math.pi / 180, -1.0 * AngX * math.pi / 180, AngZ * math.pi / 180]
             qua = quaternion_from_euler(angle_radian[0], angle_radian[1], angle_radian[2])
 
+            # def euler_from_quaternion(quaternion):
+            #     """
+            #     Converts quaternion (w in last place) to euler roll, pitch, yaw
+            #     quaternion = [x, y, z, w]
+            #     Bellow should be replaced when porting for ROS 2 Python tf_conversions is done.
+            orientation_list = [float(qua[0]), float(qua[1]), float(qua[2]), float(qua[3])]
+            (roll, pitch, yaw) = euler_from_quaternion(orientation_list)
+
+            # self.get_logger().info(f"rpy cor:{roll*57} {pitch*57} {yaw*57}")
+            
             self.imu_msg.orientation.x = qua[0]
             self.imu_msg.orientation.y = qua[1]
             self.imu_msg.orientation.z = qua[2]
             self.imu_msg.orientation.w = qua[3]
-
             self.publisher_imu.publish(self.imu_msg)
             
-            # what are the units? These might be in Gauss?
-            # looks like milliT 
-            # The magnetometer supports mT(millit), Gs(Gauss), 1mT=10Gs, measuring range from 0-2500mT(25000Gs)
+            # Unflip the direction to get in line with normal compass
+            AngZ = -1.0 * AngZ
+
+            # this now is smooth MAG CW 0 to 360 Deg
+            if (AngZ < 0.0):
+                AngZ = 360.0 + AngZ
+            
+            # correct for variation
+            AngT = AngZ + 12.8
+
+            # this now is smooth TRUE CW 0 to 360 Deg
+            if (AngT < 0.0):
+                AngT = 360.0 + AngT
+
+            # self.get_logger().info(f"Heading (MAG):{AngZ} (TRUE):{AngT}")
+            
+            # What are the units? Looks like milliT 
+            # mT(millit), Gs(Gauss), 1mT=10Gs
             # x: -22.425
             # y: -11.765
             # z: -46.982
@@ -251,12 +284,12 @@ class ImuMagNode(Node):
             HX = self.getSignInt16(self.TempBytes[15] << 8 | self.TempBytes[16]) * 13 / 1000
             HY = self.getSignInt16(self.TempBytes[17] << 8 | self.TempBytes[18]) * 13 / 1000
             HZ = self.getSignInt16(self.TempBytes[19] << 8 | self.TempBytes[20]) * 13 / 1000
-            self.mag_msg.magnetic_field.x = HX
-            self.mag_msg.magnetic_field.y = HY
+            self.mag_msg.magnetic_field.x = HY
+            self.mag_msg.magnetic_field.y = HX
             self.mag_msg.magnetic_field.z = HZ
-            # values from hard iron calibration
-            # spin robot left and right in both directions and determine the 
-            # center of the resulting x,y circle when the data are plotted - that's the offet to subtract
+            # NOTE - the magnetomer needs to have a correct internal hard iron calibration
+            # this is not a ROS2 issue, but needs to be taken care of seperately 
+            # depending on the magnetomer and its internal offset registers
             self.publisher_mag.publish(self.mag_msg)
 
         self.TempBytes.clear()

@@ -263,8 +263,8 @@ class RobotBaseNode(Node):
         # yawi   = msg.imu_state.rpy[2]
 
         # self.get_logger().info(f"Internal (RAD) Roll:{roll} Pitch:{pitch} Yaw:{yaw}")
-        #self.get_logger().info(f"InternalQ (DEG) Roll:{roll*57.2958} Pitch:{pitch*57.2958} Yaw:{yaw*57.2958}")
-        #self.get_logger().info(f"InternalD (DEG) Roll:{rolli*57.2958} Pitch:{pitchi*57.2958} Yaw:{yawi*57.2958}")
+        # self.get_logger().info(f"InternalQ (DEG) Roll:{roll*57.2958} Pitch:{pitch*57.2958} Yaw:{yaw*57.2958}")
+        # self.get_logger().info(f"InternalD (DEG) Roll:{rolli*57.2958} Pitch:{pitchi*57.2958} Yaw:{yawi*57.2958}")
 
         self.imu_main_pub[0].publish(imu_msg)
 

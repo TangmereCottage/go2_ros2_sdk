@@ -79,19 +79,11 @@ def generate_launch_description():
         'config',
         'ekf_params_internal.yaml'
     )
-
-    ekf_config_wit = os.path.join(
-        get_package_share_directory('go2_robot_sdk'),
-        'config',
-        'ekf_params_wit.yaml'
-    )
-
     ekf_config_global = os.path.join(
         get_package_share_directory('go2_robot_sdk'),
         'config',
         'ekf_params_global.yaml'
     )
-
     ekf_config_gps = os.path.join(
         get_package_share_directory('go2_robot_sdk'),
         'config',
@@ -246,7 +238,7 @@ def generate_launch_description():
             name='ekf_filter_node',
             output='screen',
             remappings=[
-                ('/odometry/filtered', '/odometry/filtered_internal')],
+                ('/odometry/filtered', '/odom_mag')],
             parameters=[{
                 'use_sim_time': use_sim_time,
             }, ekf_config_internal],
@@ -260,11 +252,11 @@ def generate_launch_description():
                 'use_sim_time': use_sim_time,
             }, ekf_config_gps],
             remappings=[
-                ("imu/data",          "/imu_wit"),                    # gives mag
-                ("gps/fix",           "/gps"),                        # gives gps postion
-                ("odometry/filtered", "/odometry/filtered_internal"), # 
-                ("gps/filtered",      "/gps/filtered"),               # output
-                ("odometry/gps",      "/odometry/gps")],              # output
+                ("imu/data",          "/imu_wit"),       # imu with quarterion with mag
+                ("gps/fix",           "/gpsx"),          # gps position
+                ("odometry/filtered", "/odom_mag"),      # odom with direction
+                ("gps/filtered",      "/gps/filtered"),  # output
+                ("odometry/gps",      "/odom_navsat")],  # output
         ),
         Node(
             package='robot_localization',
@@ -272,7 +264,7 @@ def generate_launch_description():
             name='ekf_filter_node',
             output='screen',
             remappings=[
-                ('/odometry/filtered', '/odometry/filtered_global')
+                ('/odometry/filtered', '/odom_global')
             ],
             parameters=[{
                 'use_sim_time': use_sim_time,
