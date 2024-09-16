@@ -1,5 +1,62 @@
 
 ```shell
+source install/setup.bash
+export ROBOT_IP="robot_ip" #for multiple robots, just split by ,
+export CONN_TYPE="webrtc"
+ros2 launch go2_robot_sdk robot.launch.py
+
+
+
+```colcon build```
+```
+
+The `lowstate` imu does not have a magnetometer, and reports data in the `ENU` convention 
+
+```shell
+ros2 topic echo /lowstate
+
+imu_state:
+  quaternion:             // yaw pitch roll
+  - -0.9998785257339478
+  - -0.0007873051799833775
+  - 0.0032413762528449297
+  - 0.015227883122861385
+  gyroscope:               // rotation (angular velocity - rad/s)
+  - 0.0074568502604961395  
+  - -0.012783171609044075
+  - -0.015978964045643806
+  accelerometer:           // linear acceleration (m/s^2)
+  - -0.05746084079146385
+  - -0.05147533491253853
+  - 9.581595420837402
+  rpy:                     // roll pitch yaw
+  - 0.0016731732757762074
+  - -0.0064580319449305534
+  - -0.030462516471743584
+  temperature: 80
+```
+
+
+### Internal IMU
+
+Convention / Direction
+
+Angular Velocity
+Rotate around yaw (z) 
+CCW gives POSITIVE angular velocity
+CW  gives NEGATIVE angular velocity
+
+Linear Acceleration
+Move robot side to side (y axis)
+Move LEFT - NEGATIVE 
+Move RIGHT - POSITIVE 
+
+Move robot forwards/backwards (x axis)
+Move FWD - POSITIVE 
+Move BACK - NEGATIVE 
+
+
+```shell
 ros2 topic echo /bits/odometry/gps
 
 header:
@@ -36,6 +93,13 @@ altitude: 23.477809265276257
 position_covariance:
 - 0.0
 ```
+
+
+
+
+
+
+
 
 ![Ros2 SDK](https://github.com/abizovnuralem/go2_ros2_sdk/assets/33475993/49edebbe-11b6-49c6-b82d-bc46257674bd)
 
@@ -381,9 +445,7 @@ dilution: 0.7699999809265137
 utc_time: 191946
 ```
 
-
 We three sort of different position/orientation estiamtes 
-
 
 ### /odometry/filtered
 

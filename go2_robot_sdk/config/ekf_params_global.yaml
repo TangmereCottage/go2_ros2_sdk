@@ -31,7 +31,7 @@ ekf_filter_node:
 
         # for the GPS we only have X and Y position
         # this is coming from navsat_transform
-        odom1: /odom_navsat
+        odom1: /gps/filtered
         odom1_config: [true,  true,  false,
                        false, false, false,
                        false, false, false,

@@ -56,11 +56,11 @@ def generate_launch_description():
         get_package_share_directory('go2_robot_sdk'),
         'config', 'twist_mux.yaml')
 
-    # foxglove_launch = os.path.join(
-    #     get_package_share_directory('foxglove_bridge'),
-    #     'launch',
-    #     'foxglove_bridge_launch.xml',
-    # )
+    foxglove_launch = os.path.join(
+        get_package_share_directory('foxglove_bridge'),
+        'launch',
+        'foxglove_bridge_launch.xml',
+    )
 
     slam_toolbox_config = os.path.join(
         get_package_share_directory('go2_robot_sdk'),
@@ -173,29 +173,29 @@ def generate_launch_description():
             name='rviz2',
             arguments=['-d' + os.path.join(pathSrc, 'config', rviz_config)]
         ),
-        Node(
-            package="mapviz",
-            executable="mapviz",
-            name="mapviz",
-            arguments=['_config:=' + os.path.join(pathSrc, 'config/map.mvc')]
-        ),
-        Node(
-            package="swri_transform_util",
-            executable="initialize_origin.py",
-            name="initialize_origin",
-            parameters=[
-                {"local_xy_frame" : "map"},
-                {"local_xy_origin" : "auto"},
-                {"local_xy_navsatfix_topic" : "/gps/filtered"},
-                {"use_sim_time": use_sim_time},
-            ]
-        ),
-        Node(
-            package="tf2_ros",
-            executable="static_transform_publisher",
-            name="swri_transform",
-            arguments=["0", "0", "0", "0", "0", "0", "map", "origin"]
-        ),
+        # Node(
+        #     package="mapviz",
+        #     executable="mapviz",
+        #     name="mapviz",
+        #     arguments=['_config:=' + os.path.join(pathSrc, 'config/map.mvc')]
+        # ),
+        # Node(
+        #     package="swri_transform_util",
+        #     executable="initialize_origin.py",
+        #     name="initialize_origin",
+        #     parameters=[
+        #         {"local_xy_frame"  : "map"},
+        #         {"local_xy_origin" : "auto"},
+        #         {"local_xy_navsatfix_topic" : "/gps/filtered"},
+        #         {"use_sim_time": use_sim_time},
+        #     ]
+        # ),
+        # Node(
+        #     package="tf2_ros",
+        #     executable="static_transform_publisher",
+        #     name="swri_transform",
+        #     arguments=["0", "0", "0", "0", "0", "0", "map", "origin"]
+        # ),
 
         # Connects to a joystick and produces /joy messages
         # publishes /joy (sensor_msgs/msg/Joy)
@@ -232,6 +232,9 @@ def generate_launch_description():
             executable='gps_node',
             output='screen',
         ),
+
+        # publishes odom_mag
+        # and a tf?
         Node(
             package='robot_localization',
             executable='ekf_node',
@@ -243,33 +246,36 @@ def generate_launch_description():
                 'use_sim_time': use_sim_time,
             }, ekf_config_internal],
         ),
-        Node(
-            package="robot_localization",
-            executable="navsat_transform_node",
-            name="navsat_transform",
-            output="screen",
-            parameters=[{
-                'use_sim_time': use_sim_time,
-            }, ekf_config_gps],
-            remappings=[
-                ("imu/data",          "/imu_main"),      # imu with quarterion with mag
-                ("gps/fix",           "/gpsx"),          # gps position
-                ("odometry/filtered", "/odom_mag"),      # odom with direction
-                ("gps/filtered",      "/gps/filtered"),  # output - very good
-                ("odometry/gps",      "/odom_navsat")],  # output - crappy
-        ),
-        Node(
-            package='robot_localization',
-            executable='ekf_node',
-            name='ekf_filter_node',
-            output='screen',
-            remappings=[
-                ('/odometry/filtered', '/odom_global')
-            ],
-            parameters=[{
-                'use_sim_time': use_sim_time,
-            }, ekf_config_global],
-        ),
+        # IncludeLaunchDescription(
+        #     FrontendLaunchDescriptionSource(foxglove_launch)
+        # ),
+        # Node(
+        #     package="robot_localization",
+        #     executable="navsat_transform_node",
+        #     name="navsat_transform",
+        #     output="screen",
+        #     parameters=[{
+        #         'use_sim_time': use_sim_time,
+        #     }, ekf_config_gps],
+        #     remappings=[
+        #         ("imu/data",          "/imu_wit"),       # imu with quarterion with mag
+        #         ("gps/fix",           "/gpsx"),          # gps position
+        #         ("odometry/filtered", "/odom"),          # odom w/o mag
+        #         ("gps/filtered",      "/gps/filtered"),  # output - very good
+        #         ("odometry/gps",      "/odom_navsat")],  # output - crappy
+        # ),
+        # Node(
+        #     package='robot_localization',
+        #     executable='ekf_node',
+        #     name='ekf_filter_node',
+        #     output='screen',
+        #     remappings=[
+        #         ('/odometry/filtered', '/odom_global')
+        #     ],
+        #     parameters=[{
+        #         'use_sim_time': use_sim_time,
+        #     }, ekf_config_global],
+        # ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource([
                 os.path.join(get_package_share_directory(

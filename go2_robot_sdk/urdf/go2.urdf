@@ -369,7 +369,18 @@ Stephen Brawner (brawner@gmail.com)
   </joint>
   <link name="GPS">
     <inertial><origin xyz="0 0 0" rpy="0 0 0" /><mass value="0" /><inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0" /></inertial>
-    <visual><geometry><cylinder length="0.03" radius="0.03"/></geometry><material name="blue"><color rgba="0 0 .8 1"/></material></visual>
+    <visual><geometry><cylinder length="0.02" radius="0.03"/></geometry><material name="black"><color rgba=".9 .9 .9 1"/></material></visual>
+  </link>
+
+  <joint name="IMU_joint_wit" type="fixed">
+    <origin xyz="0.22 0 0.10" rpy="0 0 0" />
+    <parent link="base_link" />
+    <child link="IMU_wit" />
+    <axis xyz="0 0 0" />
+  </joint>
+  <link name="IMU_wit">
+    <inertial><origin xyz="0 0 0" rpy="0 0 0" /><mass value="0" /><inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0" /></inertial>
+    <visual><geometry><cylinder length="0.02" radius="0.02"/></geometry><material name="yellow"><color rgba="1.0 1.0 0.0 1.0"/></material></visual>
   </link>
 
   <joint name="LIDAR_joint" type="fixed">

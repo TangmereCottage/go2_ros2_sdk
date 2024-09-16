@@ -93,11 +93,11 @@ class RobotBaseNode(Node):
         self.imu_main_pub = []
         self.imu_lidar_pub = []
 
-        self.joint_pub.append(self.create_publisher(JointState,  'joint_states'      , qos_profile))
+        self.joint_pub.append(self.create_publisher(JointState,  'joint_states', qos_profile))
         self.lidar_pub.append(self.create_publisher(PointCloud2, 'point_cloud2', qos_profile))
         self.odometry_pub.append(self.create_publisher(Odometry, 'odom', qos_profile))
         
-        self.imu_main_pub.append( self.create_publisher(Imu, 'imu_main', qos_profile))
+        self.imu_main_pub.append( self.create_publisher(Imu, 'imu_main',  qos_profile))
         self.imu_lidar_pub.append(self.create_publisher(Imu, 'imu_lidar', qos_profile))
 
         # Broadcast TF information
@@ -178,8 +178,8 @@ class RobotBaseNode(Node):
     # movement is based on /cmd_vel_out and not directly on /joy
     # so the movement data must flow from /joy to someone else and then to /cmd_vel_out 
     def cmd_vel_cb(self, msg):
-        x = round(msg.linear.x, 2)
-        y = round(msg.linear.y, 2)
+        x = round(msg.linear.x,  2)
+        y = round(msg.linear.y,  2)
         z = round(msg.angular.z, 2)
         deadband = 0.02
         if abs(x) > deadband or abs(y) > deadband or abs(z) > deadband:
@@ -233,27 +233,29 @@ class RobotBaseNode(Node):
         gyro.y = float(msg.imu_state.gyroscope[1])
         gyro.z = float(msg.imu_state.gyroscope[2])
         imu_msg.angular_velocity = gyro
-        imu_msg.angular_velocity_covariance[0] = 0.0005
-        imu_msg.angular_velocity_covariance[4] = 0.0005
-        imu_msg.angular_velocity_covariance[8] = 0.0005
+        imu_msg.angular_velocity_covariance[0] = 0.0002
+        imu_msg.angular_velocity_covariance[4] = 0.0002
+        imu_msg.angular_velocity_covariance[8] = 0.0002
 
         accel = Vector3()
         accel.x = float(msg.imu_state.accelerometer[0])
         accel.y = float(msg.imu_state.accelerometer[1])
         accel.z = float(msg.imu_state.accelerometer[2])
         imu_msg.linear_acceleration = accel
-        imu_msg.linear_acceleration_covariance[0] = 0.0005
-        imu_msg.linear_acceleration_covariance[4] = 0.0005
-        imu_msg.linear_acceleration_covariance[8] = 0.0005
+        imu_msg.linear_acceleration_covariance[0] = 0.0002
+        imu_msg.linear_acceleration_covariance[4] = 0.0002
+        imu_msg.linear_acceleration_covariance[8] = 0.0002
 
         quat_w, quat_x, quat_y, quat_z = msg.imu_state.quaternion
         imu_msg.orientation.x = float(quat_x)
         imu_msg.orientation.y = float(quat_y)
         imu_msg.orientation.z = float(quat_z)
         imu_msg.orientation.w = float(quat_w)
-        imu_msg.orientation_covariance[0] = 0.0005
-        imu_msg.orientation_covariance[4] = 0.0005
-        imu_msg.orientation_covariance[8] = 0.0005
+        imu_msg.orientation_covariance[0] = 0.0002
+        imu_msg.orientation_covariance[4] = 0.0002
+        imu_msg.orientation_covariance[8] = 0.0002
+        
+        # just for debugging
         orientation_list = [float(quat_x), float(quat_y), float(quat_z), float(quat_w)]
         (roll, pitch, yaw) = euler_from_quaternion(orientation_list)
 
@@ -262,8 +264,8 @@ class RobotBaseNode(Node):
         # pitchi = msg.imu_state.rpy[1]
         # yawi   = msg.imu_state.rpy[2]
 
-        # self.get_logger().info(f"Internal (RAD) Roll:{roll} Pitch:{pitch} Yaw:{yaw}")
-        # self.get_logger().info(f"InternalQ (DEG) Roll:{roll*57.2958} Pitch:{pitch*57.2958} Yaw:{yaw*57.2958}")
+        self.get_logger().info(f"Internal (RAD) Roll:{roll*57} Pitch:{pitch*57} Yaw:{yaw*57}")
+        # self.get_logger().info(f"Internal (DEG) Roll:{roll*57.2958} Pitch:{pitch*57.2958} Yaw:{yaw*57.2958}")
         # self.get_logger().info(f"InternalD (DEG) Roll:{rolli*57.2958} Pitch:{pitchi*57.2958} Yaw:{yawi*57.2958}")
 
         self.imu_main_pub[0].publish(imu_msg)
@@ -272,6 +274,7 @@ class RobotBaseNode(Node):
         self.lidar_pub[0].publish(msg)
 
     def publish_odom_cyclonedds(self, msg):
+        # direct republishing of /utlidar/robot_odom
         self.odometry_pub[0].publish(msg)
 
     def publish_lidar_imu_cyclonedds(self, msg):
@@ -297,8 +300,10 @@ class RobotBaseNode(Node):
             self.get_logger().info("Stand up")
             self.client.StandUp()
             time.sleep(0.3)        
-            self.client.Euler(0.0, 0.0, 0.2)  # roll, pitch, yaw
-            time.sleep(0.3)  
+            self.client.Euler(0.0, 0.0, 0.5)  # roll, pitch, yaw
+            #time.sleep(1.0)  
+            #self.client.Euler(0.0, 0.0, 0.5)  # roll, pitch, yaw
+            time.sleep(1.0)
             self.client.BalanceStand()
 
     # def on_validated(self):
