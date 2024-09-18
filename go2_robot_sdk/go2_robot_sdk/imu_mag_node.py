@@ -23,7 +23,7 @@ from sensor_msgs.msg import MagneticField
 
 from std_msgs.msg import String
 
-from tf_transformations import quaternion_from_euler, euler_from_quaternion
+from tf_transformations import quaternion_from_euler, euler_from_quaternion, quaternion_multiply, quaternion_about_axis
 
 def hex_to_short(raw_data):
     return list(struct.unpack("hhh", bytearray(raw_data)))
@@ -197,22 +197,25 @@ class ImuMagNode(Node):
 
     def processData(self, length):
         if length == 30:
+
+            # will be delayed significantly relative to the actual measurement time
+            # could/should set internal sensor clock correctly or determine delay  
             stamp = self.get_clock().now().to_msg()
-            
-            # What type of sensor is this?
+
+            # The "raw" WitMotion sensor reports 
 
             # Push forwards - x acceleration INCREASES
             # Push right    - y acceleration INCREASES
             # Gravity is NEGATIVE 9.81 
-            # So, this is a NED sensor
 
-            # ENU means that the reference frame with respect to which the IMU's orientation is reported is oriented X=East, Y=North, Z=Up. 
+            # ENU means that the reference frame with respect to which the IMU's 
+            # orientation is reported is oriented X=East, Y=North, Z=Up. 
             # When the linear acceleration value reads (0, 0, +9.8), i.e. "z is up", 
             # and the magnetometer reads (0, +, *) (i.e., "north is east"), 
             # the orientation reported by the IMU should be neutral 
             # (roll/pitch/yaw all 0, quaternion = (0, 0, 0, 1)).
 
-            # Convention:
+            # Rep103 body orientation standard:
             # X is forward
             # Y is left
             # Z is up
@@ -222,16 +225,7 @@ class ImuMagNode(Node):
             # Rotation about the x axis (roll)  should be positive for right side down motion 
             # Rotation about the z axis (yaw)   should be positive for CCW rotation
 
-            # First, we ensure a "standard" IMU
-            # X axis is aligned front to back, and X velocity (and acceleration) is POSITIVE when you move forwards
-            # When you ROLL RIGHT SIDE DOWN, you get a POSITIVE roll  
-            
-            # Y axis is aligned left to right, and Y velocity (and acceleration) is POSITIVE when you move __________
-            # When you PITCH DOWN, you get a POSITIVE pitch 
-
-            # Z is up/down and gravity is NEGATIVE 9.81
-            # When you YAW CCW (left), you get a POSITIVE yaw.
-            # Since there is a magnetometer, zero yaw faces NORTH (at least for NED) convention
+            # The main goal tho is have the IMU be consitent with the Unitree main IMU
 
             self.imu_msg.header.stamp = stamp
             self.imu_msg.header.frame_id = "IMU_wit"
@@ -253,13 +247,13 @@ class ImuMagNode(Node):
             self.imu_msg.linear_acceleration_covariance[4] = 0.0002
             self.imu_msg.linear_acceleration_covariance[8] = 0.0002
 
-            # witmotion has flipped x and y axes
+            # WitMotion has flipped x and y axes
             # used to be 2000, reduced to 40 to reconcile with Unitree
             AsY = self.getSignInt16(self.TempBytes[ 9] << 8 | self.TempBytes[10]) / 32768 * 40
             AsX = self.getSignInt16(self.TempBytes[11] << 8 | self.TempBytes[12]) / 32768 * 40
             AsZ = self.getSignInt16(self.TempBytes[13] << 8 | self.TempBytes[14]) / 32768 * 40
             
-            # also sign of sideways accel is flipped
+            # Also sign of sideways velocity is flipped
             self.imu_msg.angular_velocity.x = AsX 
             self.imu_msg.angular_velocity.y = AsY * -1.0
             self.imu_msg.angular_velocity.z = AsZ
@@ -268,37 +262,40 @@ class ImuMagNode(Node):
             self.imu_msg.angular_velocity_covariance[8] = 0.0002            
 
             # Euler angles
-            # witmotion has flipped x and y axes
+            # WitMotion has flipped x and y axes
             AngY = self.getSignInt32(self.TempBytes[23] << 24 | self.TempBytes[24] << 16 | self.TempBytes[21] << 8 | self.TempBytes[22]) / 1000
             AngX = self.getSignInt32(self.TempBytes[27] << 24 | self.TempBytes[28] << 16 | self.TempBytes[25] << 8 | self.TempBytes[26]) / 1000
             AngZ = self.getSignInt32(self.TempBytes[31] << 24 | self.TempBytes[32] << 16 | self.TempBytes[29] << 8 | self.TempBytes[30]) / 1000
 
-            # witmotion roll direction is correct (roll right = positive)
-            # witmotion pitch direction is flipped
+            # WitMotion roll direction is correct (roll right = positive)
+            # WitMotion pitch direction is flipped
             AngY = AngY * -1.0
-            # witmotion yaw direction is correct (CCW yaw = positive)
+            # WitMotion yaw direction is correct (CCW yaw = positive)
             
-            self.get_logger().info(f"WIT RPY:{AngX} {AngY} {AngZ}")
-
             angle_radian = [AngX * math.pi / 180, AngY * math.pi / 180, AngZ * math.pi / 180]
-            quaNED = quaternion_from_euler(angle_radian[0], angle_radian[1], angle_radian[2])
-
-            # self.get_logger().info(f"WIT QUA xyzw:{quaNED[0]} {quaNED[1]} {quaNED[2]} {quaNED[3]}")
-            # def euler_from_quaternion(quaternion):
-            #     """
-            #     Converts quaternion (w in last place) to euler roll, pitch, yaw
-            #     quaternion = [x, y, z, w]
-            #     """
-            # orientation_list = [float(qua[0]), float(qua[1]), float(qua[2]), float(qua[3])]
-            # (roll, pitch, yaw) = euler_from_quaternion(orientation_list)
-            # self.get_logger().info(f"rpy cor:{roll*57} {pitch*57} {yaw*57}")
+            quaUNI = quaternion_from_euler(angle_radian[0], angle_radian[1], angle_radian[2])
             
+            # self.get_logger().info(f"rpyUNI:{AngX} {AngY} {AngZ}")
+            # self.get_logger().info(f"quaUNI{quaUNI}")
+
+            # convert the orientation to ENU
+            dogStandOffset = 0.0                   # 30.0 * math.pi / 180 empirical if needed
+            rotationNtoE   = 90.0 * math.pi / 180  # correct by definition
+            mag_var        = 12.8 * math.pi / 180  # variation is 12.3 EAST
+            total_rot      = dogStandOffset + rotationNtoE - mag_var
+
+            quaROT = quaternion_about_axis(total_rot, (0, 0, 1))
+            # self.get_logger().info(f"quaROT:{quaROT}")
+
+            quaENU = quaternion_multiply(quaUNI, quaROT)
+            # self.get_logger().info(f"rotENU:{quaENU}")
+
             # for ease of debug WRT Unitree, * -1.0
             # this is does not change the direction, since we are multiplying all values by -1 
-            self.imu_msg.orientation.x = quaNED[0] * -1.0
-            self.imu_msg.orientation.y = quaNED[1] * -1.0
-            self.imu_msg.orientation.z = quaNED[2] * -1.0
-            self.imu_msg.orientation.w = quaNED[3] * -1.0
+            self.imu_msg.orientation.x = quaENU[0] * -1.0
+            self.imu_msg.orientation.y = quaENU[1] * -1.0
+            self.imu_msg.orientation.z = quaENU[2] * -1.0
+            self.imu_msg.orientation.w = quaENU[3] * -1.0
             self.imu_msg.orientation_covariance[0] = 0.0002
             self.imu_msg.orientation_covariance[4] = 0.0002
             self.imu_msg.orientation_covariance[8] = 0.0002
@@ -316,13 +313,14 @@ class ImuMagNode(Node):
                 AngZ = 360.0 + AngZ
             
             # Then, correct for variation
-            AngT = AngZ - 12.8
+            # Variation is 12.8 EAST Magnetic will be LEAST
+            AngT = AngZ + 12.8
 
             # Finally, smooth TRUE CW 0 to 360 Deg
-            if (AngT < 0.0):
-                AngT = 360.0 + AngT
+            # if (AngT > 0.0):
+            #     AngT = AngT - 360.0
 
-            self.get_logger().info(f"Heading (MAG):{AngZ} (TRUE):{AngT}")
+            # self.get_logger().info(f"Heading (MAG):{AngZ} (TRUE):{AngT}")
             
             # What are the units? Looks like milliT 
             # mT(millit), Gs(Gauss), 1mT=10Gs
@@ -342,9 +340,6 @@ class ImuMagNode(Node):
             # this is not a ROS2 issue, but needs to be taken care of seperately 
             # depending on the magnetomer and its internal offset registers
             self.publisher_mag.publish(self.mag_msg)
-
-            # convert from NED to ENU
-            # swap x and y and flip z
 
         self.TempBytes.clear()
 

@@ -256,15 +256,15 @@ class RobotBaseNode(Node):
         imu_msg.orientation_covariance[8] = 0.0002
         
         # just for debugging
-        orientation_list = [float(quat_x), float(quat_y), float(quat_z), float(quat_w)]
-        (roll, pitch, yaw) = euler_from_quaternion(orientation_list)
+        # orientation_list = [float(quat_x), float(quat_y), float(quat_z), float(quat_w)]
+        # (roll, pitch, yaw) = euler_from_quaternion(orientation_list)
 
         # these are the same thing - the imu driver is just doing the same math
         # rolli  = msg.imu_state.rpy[0]
         # pitchi = msg.imu_state.rpy[1]
         # yawi   = msg.imu_state.rpy[2]
 
-        self.get_logger().info(f"Internal (RAD) Roll:{roll*57} Pitch:{pitch*57} Yaw:{yaw*57}")
+        # self.get_logger().info(f"Internal (RAD) Roll:{roll*57} Pitch:{pitch*57} Yaw:{yaw*57}")
         # self.get_logger().info(f"Internal (DEG) Roll:{roll*57.2958} Pitch:{pitch*57.2958} Yaw:{yaw*57.2958}")
         # self.get_logger().info(f"InternalD (DEG) Roll:{rolli*57.2958} Pitch:{pitchi*57.2958} Yaw:{yawi*57.2958}")
 

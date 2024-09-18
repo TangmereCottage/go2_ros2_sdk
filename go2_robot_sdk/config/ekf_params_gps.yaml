@@ -2,14 +2,14 @@ navsat_transform:
   ros__parameters:
     frequency: 30.0
     delay: 3.0 # wait for data to arrive
-    magnetic_declination_radians: 0.0 # 0.225
-    yaw_offset: 0.0 
+    magnetic_declination_radians: 0.0 
+    yaw_offset: 0.0
     # 1.57 pi/2 - this makes sure the /gps/filtered goes in the right direction
-    # has noting to do with the /odom_global direction
+    # has nothing to do with the /odom_global direction
     zero_altitude: true
     broadcast_cartesian_transform: true
     publish_filtered_gps: true
-    use_odometry_yaw: false # seems critical for this to be TRUE
+    use_odometry_yaw: true # seems critical for this to be TRUE
     wait_for_datum: false
 
 # Most IMU sensors that have a absolute orientation use north as 0. navsat_transform uses east as 0 (to follow REP 103). 
