@@ -46,10 +46,10 @@ class CocoDetectorNode(Node):
             10)
 
         self.detected_objects_publisher = \
-            self.create_publisher(Detection2DArray, "/bits/image_detected_objects", 10)
+            self.create_publisher(Detection2DArray, "/image_detected_objects", 10)
         
         if self.get_parameter('publish_annotated_image').get_parameter_value().bool_value:
-            self.annotated_image_publisher = self.create_publisher(Image, "/bits/image_annotated", 10)
+            self.annotated_image_publisher = self.create_publisher(Image, "/image_annotated", 10)
         else:
             self.annotated_image_publisher = None
 
@@ -96,6 +96,7 @@ class CocoDetectorNode(Node):
                 colors="yellow")
         else:
             annotated_image = torch.tensor(image)
+
         ros2_image_msg = self.bridge.cv2_to_imgmsg(
             annotated_image.numpy().transpose(1, 2, 0),
             encoding="bgr8")

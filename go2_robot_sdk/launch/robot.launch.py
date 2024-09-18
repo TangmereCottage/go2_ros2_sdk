@@ -261,7 +261,6 @@ def generate_launch_description():
                 ("imu/data",          "/imu_wit"),   # imu with quarterion with mag
                 ("gps/fix",           "/gpsx"),      # gps position
                 ("odometry/filtered", "/odom_mag"),  # odom w mag
-                # we could also try /odom_mag
                 ("gps/filtered",      "/gps/filtered"),  # output - very good
                 ("odometry/gps",      "/odom_navsat")],  # output - crappy
         ),

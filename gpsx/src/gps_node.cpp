@@ -13,10 +13,6 @@
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/nav_sat_fix.hpp" //sensor_msgs/NavSatFix
 
-// #include "sensor_msgs/msg/nav_sat_status.hpp"
-// #include "gpsx/msg/gpsx.hpp"
-// #include "gpsx/srv/get_sat_list.hpp"
-
 using namespace std::chrono_literals;
 
 /*
@@ -433,8 +429,11 @@ int GPSPublisher::readMessage(void)
         }
       }
       //RCLCPP_INFO(this->get_logger(),"UTCtime: "+ UTCtime +" fix:" + std::to_string(fix) + " satellites: " + std::to_string(satellites) + " dilution: " + std::to_string(dilution) + " separation: "+ std::to_string(separation));
+      // std::cout << "UTCtime: " << gga_.UTCtime << " fix:" << std::to_string(gga_.fix) << " satellites: " << std::to_string(gga_.satellites)\
+      // << " dilution: " << std::to_string(gga_.dilution) << " separation: " << std::to_string(gga_.separation)\
+      // << " latitude: "  << std::to_string(gga_.latitude) << " longitude: "  << std::to_string(gga_.longitude) << std::endl;
+
       std::cout << "UTCtime: " << gga_.UTCtime << " fix:" << std::to_string(gga_.fix) << " satellites: " << std::to_string(gga_.satellites)\
-       << " dilution: " << std::to_string(gga_.dilution) << " separation: " << std::to_string(gga_.separation)\
       << " latitude: "  << std::to_string(gga_.latitude) << " longitude: "  << std::to_string(gga_.longitude) << std::endl;
     }
     // else if(strncmp(readBuffer,"$GPVTG",6)==0)
@@ -478,9 +477,9 @@ int GPSPublisher::readMessage(void)
           break;                              
         }
       }
-      std::cout << "True:" << std::to_string(vtg_.true_course) \
-      << " mag:"      << std::to_string(vtg_.true_course_magnetic)\
-      << " GS(km/h):" << std::to_string(vtg_.ground_speed) << std::endl;
+      // std::cout << "True:" << std::to_string(vtg_.true_course) \
+      // << " mag:"      << std::to_string(vtg_.true_course_magnetic)\
+      // << " GS(km/h):" << std::to_string(vtg_.ground_speed) << std::endl;
     }
     else
     {
@@ -508,16 +507,6 @@ void GPSPublisher::timer_callback()
   // read and interprete the messages recieved
   readMessage();
 
-// // #include <chrono>
-// // #include <functional>
-// // #include <memory>
-
-// // #include "geometry_msgs/msg/transform_stamped.hpp"
-// // #include "rclcpp/rclcpp.hpp"
-// // #include "tf2_ros/transform_broadcaster.h"
-
-// using namespace std::chrono_literals;
-
   if(newdata_)
   {
     message.header.stamp= this->get_clock()->now();
@@ -530,30 +519,6 @@ void GPSPublisher::timer_callback()
     newdata_=false;
   }
 }
-
-// void listGps(const std::shared_ptr<gpsx::srv::GetSatList::Request> request,std::shared_ptr<gpsx::srv::GetSatList::Response> response)
-// {
-//   std::cout << "Got request: " << request->type;
-//   std::vector<int16_t> ids;
-//   std::vector<int16_t> types;
-//   std::vector<int16_t> elevations;
-//   std::vector<int16_t> azimuths;
-//   std::vector<int16_t> snrs;    
-
-//   for(auto it : sat_monitor_)
-//   {
-//     ids.push_back(it.id);
-//     types.push_back(it.type);
-//     elevations.push_back(it.elevation);
-//     azimuths.push_back(it.azimuth);
-//     snrs.push_back(it.SNR);
-//   }
-//   response->id=std::move(ids);
-//   response->gnsstype=std::move(types);
-//   response->elevation=std::move(elevations);
-//   response->azimuth=std::move(azimuths);
-//   response->snr=std::move(snrs);
-// }
 
 int main(int argc, char * argv[])
 {
