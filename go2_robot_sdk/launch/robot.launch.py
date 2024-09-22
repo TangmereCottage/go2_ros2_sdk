@@ -135,7 +135,11 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-
+        # DeclareLaunchArgument(
+        #     "log_level",
+        #     default_value=["debug"],
+        #     description="Logging level",
+        # ),
         *urdf_launch_nodes,
         Node(
             package='go2_robot_sdk',
@@ -185,11 +189,17 @@ def generate_launch_description():
             name="initialize_origin",
             parameters=[
                 {"local_xy_frame"  : "map"},
-                {"local_xy_origin" : "auto"},
-                {"local_xy_navsatfix_topic" : "/gps/filtered"},
+                {"local_xy_origin" : "house"},
+                {"local_xy_origins": [39.000000000,-120.00000000,20.00,0.0]},
+                #{"local_xy_navsatfix_topic" : "/gps/filtered"}, # this is coming from the navsat node 
                 {"use_sim_time": use_sim_time},
             ]
         ),
+        
+        # That tool will publish a static transform from the parent frame foo to 
+        # the child frame bar with (X, Y, Z) translation (1, 2, 3) and (yaw, pitch, roll) 
+        # body-fixed axis rotation sequence (0.5, 0.1, -1.0).
+
         Node(
             package="tf2_ros",
             executable="static_transform_publisher",
@@ -235,47 +245,48 @@ def generate_launch_description():
         # IncludeLaunchDescription(
         #     FrontendLaunchDescriptionSource(foxglove_launch)
         # ),
-        # publishes odom_mag
-        # and a tf?
         Node(
             package='robot_localization',
             executable='ekf_node',
             name='ekf_filter_node',
             output='screen',
+            # arguments=['--ros-args', '--log-level', 'debug'],
             remappings=[
                 ('/odometry/filtered', '/odom_mag')],
             parameters=[{
                 'use_sim_time': use_sim_time,
             }, ekf_config_internal],
         ),
-
         Node(
             package="robot_localization",
             executable="navsat_transform_node",
             name="navsat_transform",
             output="screen",
+            # arguments=['--ros-args', '--log-level', 'debug'],
             parameters=[{
                 'use_sim_time': use_sim_time,
             }, ekf_config_gps],
             remappings=[
-                ("imu/data",          "/imu_wit"),   # imu with quarterion with mag
-                ("gps/fix",           "/gpsx"),      # gps position
-                ("odometry/filtered", "/odom_mag"),  # odom w mag
-                ("gps/filtered",      "/gps/filtered"),  # output - very good
-                ("odometry/gps",      "/odom_navsat")],  # output - crappy
+                ("imu",               "/imu_wit"),       # imu with quarterion with mag
+                ("gps/fix",           "/gpsx"),          # gps position
+                ("odometry/filtered", "/odom_mag"),      # odom with mag, coming from the EKF
+                ("gps/filtered",      "/gps/filtered"),  
+                # output - very good - basically just 
+                # odom offset by origin, in different frame
+                ("odometry/gps",      "/odom_navsat")],  # output - crappy and noisy - contains GPS data
         ),
-        # Node(
-        #     package='robot_localization',
-        #     executable='ekf_node',
-        #     name='ekf_filter_node',
-        #     output='screen',
-        #     remappings=[
-        #         ('/odometry/filtered', '/odom_global')
-        #     ],
-        #     parameters=[{
-        #         'use_sim_time': use_sim_time,
-        #     }, ekf_config_global],
-        # ),
+        Node(
+            package='robot_localization',
+            executable='ekf_node',
+            name='ekf_filter_node',
+            output='screen',
+            remappings=[
+                ('/odometry/filtered', '/odom_global')
+            ],
+            parameters=[{
+                'use_sim_time': use_sim_time,
+            }, ekf_config_global],
+        ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource([
                 os.path.join(get_package_share_directory(
